@@ -263,7 +263,7 @@ export class Bottle extends Egg {
 
 export class ISSPass extends Egg {
   static egg = "iss";
-  layer = "mountain"; // in front: Mt. Hood only rises a couple of degrees above Hood River's horizon duration = 900; perHour = 3000; exclusive = false;
+  layer = "mountain"; duration = 900; perHour = 3000; exclusive = false; // in front: Mt. Hood rises only ~2 degrees
   allowed(c) { return issVisible(c.nowMs) ? 1 : 0; }
   begin(c) { this.forced = !issVisible(c.nowMs); return true; }
   draw(img, c, age) {

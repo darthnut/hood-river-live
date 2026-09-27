@@ -13,10 +13,10 @@ static layout in `assets/scene.json` is exported from that project's renderer
 Any static file server works (ES modules don't load from `file://`):
 
 ```bash
-python -m http.server 5190 --directory gorge-live
+python gorge-live/tools/serve.py 5191   # a static server that disables caching
 ```
 
-Then open http://127.0.0.1:5190/. Add `?egg=NAME` to trigger an egg (e.g. `?egg=dragon`).
+Then open http://127.0.0.1:5191/. Add `?egg=NAME` to trigger an egg (e.g. `?egg=dragon`).
 
 Development tools (Node 18+): `node tools/moments.mjs out.png "osprey@14:00@5" ...` renders eggs at chosen
 moments to a contact sheet; `node tools/soak.mjs` runs every hour of many special dates at a high egg
@@ -36,5 +36,14 @@ values to compare with the board's Python. For testing, the page takes URL param
 - `src/eggs1.js` .. `src/eggs5.js` — all 96 eggs, ported from the board (`eggs_all.js` lists them).
 - `src/holidays.js`, `src/calendar.js` — the line under the clock (holidays, special days, sky events).
 - `src/skymath.js`, `src/skycalc.js` — lunar and solar eclipses, planets, the moon, meteor-shower radiants.
-- `src/skyfeeds.js` — where live ISS, Starlink and comet data will plug in (demo passes until then).
+- `src/skyfeeds.js` — reads `assets/sky.json` and interpolates the live ISS, Starlink and comet positions.
+
+## Live sky data
+
+`tools/skyjob.py` precomputes the next 72 hours of visible ISS passes, freshly launched Starlink trains
+and naked-eye comets over Hood River into `assets/sky.json` (a few KB). Visitors' browsers only read that
+file, so CelesTrak and the Minor Planet Center see one download a day rather than one per visitor. The
+GitHub Action in `.github/workflows/sky.yml` runs it daily; if a run fails the last file keeps working for
+three days. The orbit code in `tools/sky/` is the LED board's own. To refresh by hand:
+`pip install sgp4` then `python tools/skyjob.py`.
 - `src/pix.js`, `src/rng.js` — drawing helpers and a seeded random generator.

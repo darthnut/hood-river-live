@@ -1,0 +1,29 @@
+# Refresh assets/sky.json once a day: the next 72 hours of visible ISS passes, Starlink trains and
+# bright comets over Hood River. The site only reads the file, so the orbit sources see one download a
+# day. If a run fails, the previous file keeps working for up to three days.
+name: Refresh sky data
+
+on:
+  schedule:
+    - cron: "17 10 * * *"  # 3:17 am in Hood River (PDT)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sky:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install sgp4==2.27
+      - run: python tools/skyjob.py
+      - name: Commit the new data
+        run: |
+          git config user.name "sky-data-bot"
+          git config user.email "sky-data-bot@users.noreply.github.com"
+          git add assets/sky.json
+          git diff --cached --quiet || (git commit -m "Refresh sky data" && git push)

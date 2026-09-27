@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs";
 import { Scene } from "../src/scene.js";
 import { ALL_EGGS } from "../src/eggs_all.js";
 import { hoodRiverTime } from "../src/sky.js";
+import { setSky } from "../src/skyfeeds.js";
 
 const data = JSON.parse(readFileSync(new URL("../assets/scene.json", import.meta.url)));
+try { setSky(JSON.parse(readFileSync(new URL("../assets/sky.json", import.meta.url)))); } catch (e) { /* no live sky data */ }
 const dates = [[2026, 9, 26], [2026, 7, 4], [2026, 10, 31], [2026, 12, 24], [2026, 12, 31], [2026, 2, 14], [2026, 3, 14],
   [2026, 4, 1], [2026, 4, 5], [2026, 11, 13], [2026, 8, 12], [2026, 1, 20], [2026, 6, 30]];
 const weathers = [null, "rain", "snow", "fog", "thunderstorm", "partly"];

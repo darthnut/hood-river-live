@@ -6,12 +6,14 @@ import { LiveWind, PRESETS } from "./weather.js";
 import { hoodRiverTime, localParts } from "./sky.js";
 import { ALL_EGGS } from "./eggs_all.js";
 import { labels } from "./holidays.js";
+import { loadSky } from "./skyfeeds.js";
 
 const FPS = 20;
 const T0 = Date.UTC(2026, 0, 1) / 1000; // scene time counts from here, so every visitor's barge is in the same place
 
 export async function start(canvas, { onStatus = () => {} } = {}) {
   const data = await (await fetch(new URL("../assets/scene.json", import.meta.url))).json();
+  loadSky(new URL("../assets/sky.json", import.meta.url));
   const q = new URLSearchParams(location.search);
   const scene = new Scene(data, { eggClasses: ALL_EGGS, labels, log: m => console.log(m) });
   const fixedWind = q.get("wind");
@@ -57,5 +59,6 @@ export async function start(canvas, { onStatus = () => {} } = {}) {
   }
   frame();
   setInterval(frame, 1000 / FPS);
+  window.gorge = { scene, wind }; // for poking at it from the browser console
   return { scene, wind };
 }

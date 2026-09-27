@@ -7,9 +7,11 @@ import { Scene } from "../src/scene.js";
 import { ALL_EGGS } from "../src/eggs_all.js";
 import { hoodRiverTime } from "../src/sky.js";
 import { W, H, text } from "../src/pix.js";
+import { setSky } from "../src/skyfeeds.js";
 
 const [out, ...specs] = process.argv.slice(2);
 const data = JSON.parse(readFileSync(new URL("../assets/scene.json", import.meta.url)));
+try { setSky(JSON.parse(readFileSync(new URL("../assets/sky.json", import.meta.url)))); } catch (e) { /* no live sky data */ }
 const wind = { speed: 28, gust: 36, dir: 270, cloud: 0, rain: 0, code: 0, snowfall: 0, snow_depth: 0,
   visibility: 24000, temp: 60, pm25: 0, live: true, compass: () => "W" };
 
