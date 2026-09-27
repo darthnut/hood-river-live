@@ -31,6 +31,27 @@
   button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   .status { color: var(--dim); font-size: 13px; margin-left: auto; }
   footer { color: var(--dim); font-size: 13px; max-width: 70ch; }
+  [hidden] { display: none !important; }
+  #mode { border-color: var(--amber); color: var(--amber); background: transparent; }
+  .controls { background: #101318; border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+  .controls h3 { font: 400 13px var(--display); color: var(--amber); margin: 0 0 10px; letter-spacing: .04em; }
+  .controls h4 { font: 500 12px var(--body); color: var(--dim); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: .06em; }
+  .controls .wide { grid-column: 1 / -1; }
+  .controls .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .controls button { padding: 5px 11px; font-size: 12.5px; }
+  .controls button:disabled { opacity: .45; cursor: default; }
+  .controls input[type=range] { width: 100%; accent-color: var(--amber); }
+  .controls input[type=date], .controls input[type=search] { font: 13px var(--body); color: var(--text); background: #171b21;
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; }
+  .controls input[type=search] { flex: 1; min-width: 160px; }
+  .controls label { color: var(--dim); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+  .controls .clock { font: 400 14px var(--display); color: var(--text); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  #c-eggs { max-height: 340px; overflow: auto; padding-right: 4px; }
+  #c-eggs section h4:first-child { margin-top: 4px; }
+  @media (max-width: 760px) { body.ctl-open .panel { position: sticky; top: 0; z-index: 2; } }
+  .note { color: var(--dim); font-size: 13px; min-height: 1.5em; margin: 8px 0 0; }
 </style>
 </head>
 <body>
@@ -46,7 +67,41 @@
   <div class="bar">
     <button id="led" aria-pressed="false">LED look</button>
     <button id="full">Full screen</button>
+    <button id="ctl" aria-expanded="false" aria-controls="controls">Controls</button>
+    <button id="mode" hidden></button>
     <span class="status" id="status">Loading…</span>
+  </div>
+  <div class="controls" id="controls" hidden>
+    <section>
+      <h3>Time</h3>
+      <div class="clock" id="c-clock"></div>
+      <input type="range" id="c-tod" min="0" max="1439" step="1" aria-label="Time of day">
+      <div class="row"><input type="date" id="c-date" aria-label="Date"><span id="c-jumps" class="chips"></span></div>
+      <h4>Clock speed</h4>
+      <div class="chips" id="c-speed"></div>
+    </section>
+    <section>
+      <h3>Weather</h3>
+      <div class="chips" id="c-weather"></div>
+      <h4>Wind</h4>
+      <input type="range" id="c-wind" min="0" max="45" step="1" aria-label="Wind speed in mph">
+      <div class="row"><span id="c-wind-val" class="clock"></span><label><input type="checkbox" id="c-wind-live"> Live wind</label></div>
+    </section>
+    <section class="wide">
+      <h3>Easter eggs</h3>
+      <div class="row">
+        <input type="search" id="c-search" placeholder="Search eggs" aria-label="Search easter eggs">
+        <label title="Move the clock (and the wind) to a time and date the egg plays well at"><input type="checkbox" id="c-jump" checked> Jump to a good time</label>
+      </div>
+      <div id="c-eggs"></div>
+      <p class="note" id="c-note">Pick one to play it. Many only happen at certain times, dates or winds.</p>
+      <div class="row">
+        <button id="c-show" type="button">Start the egg show</button>
+        <button id="c-skip" type="button" hidden>Next egg</button>
+        <span class="note" id="c-show-now" style="margin:0"></span>
+        <button id="c-reset" type="button" style="margin-left:auto">Back to live</button>
+      </div>
+    </section>
   </div>
   <footer>Looking south across the Columbia from the Washington shore: the Hood River Bridge, the town, and Mt. Hood. The sun, moon and weather follow what's really happening in Hood River, Oregon.</footer>
 </main>
@@ -75,7 +130,16 @@
   document.getElementById("full").onclick = () => document.getElementById("panel").requestFullscreen?.().catch(() => {});
   document.addEventListener("fullscreenchange", () => setTimeout(drawDots, 50));
   drawDots();
-  start(px, { onStatus: s => { document.getElementById("status").textContent = `${s.fps.toFixed(0)} fps · ${s.live ? "live weather" : "weather loading"}`; } })
+  import { mountPanel } from "./src/panel.js";
+  let onLog = () => {};
+  const ctlBtn = document.getElementById("ctl"), controls = document.getElementById("controls");
+  ctlBtn.onclick = () => { controls.hidden = !controls.hidden; ctlBtn.setAttribute("aria-expanded", !controls.hidden); ctlBtn.setAttribute("aria-pressed", !controls.hidden); document.body.classList.toggle("ctl-open", !controls.hidden); };
+  start(px, { onStatus: s => { document.getElementById("status").textContent = `${s.fps.toFixed(0)} fps · ${s.live ? "live weather" : "weather loading"}`; }, onLog: m => onLog(m) })
+    .then(async ({ scene, ctl }) => {
+      const p = await mountPanel(controls, ctl, scene);
+      onLog = p.onLog;
+      document.getElementById("mode").onclick = () => { ctl.goLive(); p.sync(); };
+    })
     .catch(e => { document.getElementById("status").textContent = "Couldn't load the scene."; console.error(e); });
 </script>
 </body>

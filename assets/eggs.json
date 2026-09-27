@@ -1,0 +1,596 @@
+[
+{
+"id": "meteor",
+"title": "Shooting star",
+"cat": "sky",
+"doc": "A single shooting star streaks across the night sky."
+},
+{
+"id": "aurora",
+"title": "Aurora",
+"cat": "sky",
+"doc": "Rare northern lights ripple green and violet low over the mountain on a dark night."
+},
+{
+"id": "ufo",
+"title": "UFO",
+"cat": "odd",
+"doc": "A flying saucer glides in at night, hovers, beams a salmon up out of the river, and zips away."
+},
+{
+"id": "sasquatch",
+"title": "Sasquatch",
+"cat": "odd",
+"doc": "Sasquatch strolls along the far shore and stops to wave; after dark only its red eyes show."
+},
+{
+"id": "salmon",
+"title": "Leaping salmon",
+"cat": "wild",
+"doc": "A salmon leaps clear of the river and splashes back in."
+},
+{
+"id": "sternwheeler",
+"title": "Sternwheeler",
+"cat": "river",
+"doc": "The Columbia Gorge sternwheeler paddles past, red paddlewheel turning."
+},
+{
+"id": "rainbow",
+"title": "Rainbow",
+"cat": "sky",
+"doc": "A rainbow arcs across the sky opposite the afternoon sun."
+},
+{
+"id": "whale",
+"title": "Sky whale",
+"cat": "odd",
+"doc": "A whale swims slowly across the sky, spouting from its blowhole now and then."
+},
+{
+"id": "steam",
+"title": "Steaming summit",
+"cat": "season",
+"doc": "Mt. Hood lets off a lazy plume of steam from near the summit."
+},
+{
+"id": "spider",
+"title": "Dangling spider",
+"cat": "odd",
+"doc": "A spider drops down on its thread, dangles a while, and climbs back up."
+},
+{
+"id": "megajump",
+"title": "Mega jump",
+"cat": "river",
+"doc": "A kiteboarder boosts a huge jump, right off the top of the screen."
+},
+{
+"id": "shark",
+"title": "Shark",
+"cat": "odd",
+"doc": "A dorsal fin cruises upriver toward a windsurfer; the jaws come up and the sailor is gone."
+},
+{
+"id": "humpback",
+"title": "Humpback breach",
+"cat": "wild",
+"doc": "A humpback swims upriver: spouts as it surfaces, one breach with a big splash, flukes on the dive."
+},
+{
+"id": "sealion",
+"title": "Sea lion",
+"cat": "wild",
+"doc": "A sea lion pops up, barks, lunges after a leaping salmon and slips back under."
+},
+{
+"id": "geese",
+"title": "Geese in a V",
+"cat": "wild",
+"doc": "A honking V of Canada geese crossing the sky, in the migration seasons."
+},
+{
+"id": "heron",
+"title": "Great blue heron",
+"cat": "wild",
+"doc": "A great blue heron flaps low along the shore, lands on the sandbar, fishes, and flies off."
+},
+{
+"id": "paragliders",
+"title": "Paragliders",
+"cat": "river",
+"doc": "Colourful paraglider canopies drifting down off the western ridge toward the waterfront."
+},
+{
+"id": "sturgeon",
+"title": "Sturgeon",
+"cat": "wild",
+"doc": "A giant white sturgeon's bony back breaks the surface, rolls, and sinks. Very rare."
+},
+{
+"id": "steamtrain",
+"title": "Steam train",
+"cat": "river",
+"doc": "The Mt. Hood Railroad's steam excursion puffing along the shoreline tracks."
+},
+{
+"id": "canoes",
+"title": "Lewis & Clark canoes",
+"cat": "river",
+"doc": "Lewis and Clark's dugout canoes paddling downriver -- October only, as in 1805."
+},
+{
+"id": "tallship",
+"title": "Tall ship",
+"cat": "river",
+"doc": "A tall ship sails by beyond the bridge."
+},
+{
+"id": "fireworks",
+"title": "Fireworks",
+"cat": "holiday",
+"doc": "Fireworks over the river on the Fourth of July and at midnight on New Year's Eve."
+},
+{
+"id": "halloween",
+"title": "Halloween",
+"cat": "holiday",
+"doc": "Halloween night: a witch on her broom crosses the moon and jack-o'-lanterns glow in town windows."
+},
+{
+"id": "christmas",
+"title": "Christmas Eve",
+"cat": "holiday",
+"doc": "Christmas Eve: Santa's sleigh and reindeer fly across the moon."
+},
+{
+"id": "holidaylights",
+"title": "Holiday lights",
+"cat": "holiday",
+"doc": "Strings of coloured lights along the bridge on December nights (town view)."
+},
+{
+"id": "harvestmoon",
+"title": "Harvest moon",
+"cat": "sky",
+"doc": "On the full moon nearest the autumn equinox, the moon rises huge and orange over the east hills."
+},
+{
+"id": "satellites",
+"title": "Satellites",
+"cat": "sky",
+"doc": "A train of satellites -- a line of moving dots -- crossing the night sky."
+},
+{
+"id": "hydroplanes",
+"title": "Hydroplanes",
+"cat": "river",
+"doc": "Two unlimited hydroplanes race down the river throwing huge roostertails."
+},
+{
+"id": "bigspider",
+"title": "Giant spider",
+"cat": "odd",
+"doc": "A giant jumping spider peeks up over the bottom edge, looks around with its big front eyes, and ducks."
+},
+{
+"id": "catapult",
+"title": "Windsurfer catapult",
+"cat": "river",
+"doc": "A windsurfer gets launched over the front of the board, splashes down and uphauls the sail."
+},
+{
+"id": "kitecrash",
+"title": "Kite crash",
+"cat": "river",
+"doc": "A kite loops, nose-dives into the water, sits there a moment, and relaunches."
+},
+{
+"id": "blossom",
+"title": "Pear blossom",
+"cat": "season",
+"doc": "Pear-blossom time: the orchard slopes behind town turn white and pink (April)."
+},
+{
+"id": "fallcolor",
+"title": "Fall color",
+"cat": "season",
+"doc": "October: gold, orange and red patches through the orchards, the west ridge and the bluff."
+},
+{
+"id": "bats",
+"title": "Bats at dusk",
+"cat": "wild",
+"doc": "A flutter of little bats over the waterfront just after summer sunsets."
+},
+{
+"id": "elk",
+"title": "Elk herd",
+"cat": "wild",
+"doc": "A small elk herd grazing slowly along the orchard slope above town."
+},
+{
+"id": "salmonrun",
+"title": "Salmon run",
+"cat": "wild",
+"doc": "The September salmon run: a burst of leaps all across the river."
+},
+{
+"id": "claude",
+"title": "Colossal Claude",
+"cat": "odd",
+"doc": "The Columbia's own sea serpent legend: humps, a long neck, a look around, and gone."
+},
+{
+"id": "kraken",
+"title": "Kraken",
+"cat": "odd",
+"doc": "Very rare: tentacles rise around the barge, curl, and slip back under."
+},
+{
+"id": "ducks",
+"title": "Rubber duck race",
+"cat": "river",
+"doc": "A charity-race flotilla of yellow rubber ducks bobbing downriver."
+},
+{
+"id": "bottle",
+"title": "Message in a bottle",
+"cat": "river",
+"doc": "A message in a bottle drifting down the river, glinting."
+},
+{
+"id": "iss",
+"title": "Space station pass",
+"cat": "sky",
+"doc": "The real International Space Station crossing the sky on actual visible passes over Hood River."
+},
+{
+"id": "greenflash",
+"title": "Green flash",
+"cat": "sky",
+"doc": "On a clear evening, a brief green flash on the sun's last sliver as it slips behind the ridge."
+},
+{
+"id": "eclipse",
+"title": "Lunar eclipse",
+"cat": "sky",
+"doc": "A real lunar eclipse: Earth's shadow creeps across the moon and turns it copper."
+},
+{
+"id": "valentine",
+"title": "Valentine's Day",
+"cat": "holiday",
+"doc": "Valentine's Day: little hearts drifting up from the town's windows."
+},
+{
+"id": "stpatrick",
+"title": "St. Patrick's Day",
+"cat": "holiday",
+"doc": "St. Patrick's Day: a rainbow that ends in a pot of gold on the sandbar."
+},
+{
+"id": "easter",
+"title": "Easter bunny",
+"cat": "holiday",
+"doc": "Easter Sunday: a bunny hops along the waterfront leaving pastel eggs behind."
+},
+{
+"id": "thanksgiving",
+"title": "Thanksgiving turkey",
+"cat": "holiday",
+"doc": "Thanksgiving: a turkey strutting along the waterfront, gobbling."
+},
+{
+"id": "birthday",
+"title": "Birthday",
+"cat": "holiday",
+"doc": "A birthday banner with a cake and candles."
+},
+{
+"id": "wish",
+"title": "11:11 wish star",
+"cat": "sky",
+"doc": "At 11:11 and 12:34 (am and pm) a bright shooting star crosses -- day or night."
+},
+{
+"id": "lenticular",
+"title": "Lenticular cap",
+"cat": "season",
+"doc": "A lenticular cap cloud parked on Mt. Hood's summit -- a windy, moist-aloft day's flying saucer."
+},
+{
+"id": "alpenglow",
+"title": "Alpenglow",
+"cat": "season",
+"doc": "Just after sunset the mountain flushes pink while the valley is already in shadow."
+},
+{
+"id": "pears",
+"title": "Pear truck",
+"cat": "river",
+"doc": "Harvest time on the Fruit Loop: a pickup piled with pear bins heads along the freeway."
+},
+{
+"id": "fair",
+"title": "County fair",
+"cat": "season",
+"doc": "Late July: the Hood River County Fair's Ferris wheel turning, lit up on the hillside."
+},
+{
+"id": "race",
+"title": "Windsurf race",
+"cat": "river",
+"doc": "A windsurfing race: a pack of sails rounds the marks while the committee boat's horn sounds."
+},
+{
+"id": "icefloes",
+"title": "Ice floes",
+"cat": "season",
+"doc": "A hard freeze: ice floes drift downriver, and a bald eagle rides one."
+},
+{
+"id": "damrainbow",
+"title": "Spill-mist rainbow",
+"cat": "season",
+"doc": "Spring runoff: spill mist rising far downriver, with a small rainbow in it."
+},
+{
+"id": "paddleboard",
+"title": "Lost paddleboarder",
+"cat": "river",
+"doc": "In a gale, a stand-up paddleboarder paddles furiously upriver and drifts helplessly downriver."
+},
+{
+"id": "beaver",
+"title": "Beaver",
+"cat": "wild",
+"doc": "A beaver swims for the sandbar towing a stick, then slaps its tail."
+},
+{
+"id": "snowday",
+"title": "Snow day",
+"cat": "season",
+"doc": "A snow day: kids sledding down the hillside above town and trudging back up."
+},
+{
+"id": "shower",
+"title": "Meteor shower",
+"cat": "sky",
+"doc": "Real meteor showers on their peak nights, streaking away from the true radiant."
+},
+{
+"id": "planets",
+"title": "Planets",
+"cat": "sky",
+"doc": "Venus, Jupiter, Mars (when it's close) and Saturn where they really are."
+},
+{
+"id": "starlink",
+"title": "Starlink train",
+"cat": "sky",
+"doc": "A freshly launched Starlink 'string of pearls' crossing the sky -- the real one, when it's visible."
+},
+{
+"id": "solareclipse",
+"title": "Solar eclipse",
+"cat": "sky",
+"doc": "A real solar eclipse over Hood River: the moon takes a bite out of the sun (next one: Jan 14, 2029)."
+},
+{
+"id": "comet",
+"title": "Comet",
+"cat": "sky",
+"doc": "A naked-eye comet, from real orbits, when one is bright and up; a demo one when forced."
+},
+{
+"id": "nlc",
+"title": "Noctilucent clouds",
+"cat": "sky",
+"doc": "Midsummer twilight: electric-blue night-shining clouds low in the northwest (the right-hand edge)."
+},
+{
+"id": "bigfoot",
+"title": "Bigfoot windsurfing",
+"cat": "odd",
+"doc": "Sasquatch, on a windsurfer, flying across the river. Waves on the way past."
+},
+{
+"id": "bigcat",
+"title": "Giant cat",
+"cat": "odd",
+"doc": "A giant tabby rises from behind the bluff, watches a kite, and bats it out of the sky."
+},
+{
+"id": "spiderclock",
+"title": "Spider clock",
+"cat": "odd",
+"doc": "The original spider clock's jumping spider returns: it hops along the clock, bumping each digit."
+},
+{
+"id": "balloons",
+"title": "Balloon festival",
+"cat": "season",
+"doc": "A calm dawn: a dozen hot air balloons drifting up the Gorge, burners flaring."
+},
+{
+"id": "osprey-left",
+"title": "Osprey dive, left",
+"cat": "wild",
+"doc": "The osprey crosses the whole scene and dives just past the bridge."
+},
+{
+"id": "osprey-right",
+"title": "Osprey dive, right",
+"cat": "wild",
+"doc": "The osprey glides in, folds, and stoops into the river right of centre."
+},
+{
+"id": "osprey-eagle",
+"title": "Eagle steals the fish",
+"cat": "wild",
+"doc": "A bald eagle overtakes the osprey on its climb and snatches the fish."
+},
+{
+"id": "tallship-lift",
+"title": "Tall ship, bridge lift",
+"cat": "river",
+"doc": "The tall ship sails in close, too tall for the bridge, and the lift span rises to let it through."
+},
+{
+"id": "trainlights",
+"title": "Train of Lights",
+"cat": "holiday",
+"doc": "The Mt. Hood Railroad's Train of Lights: an excursion train strung with holiday lights, on December nights."
+},
+{
+"id": "pelicans",
+"title": "White pelicans",
+"cat": "wild",
+"doc": "American white pelicans circling high on a summer thermal, flashing white and black as they turn."
+},
+{
+"id": "floatplane",
+"title": "Floatplane",
+"cat": "river",
+"doc": "A floatplane comes in low, lands on the river, taxis, and takes off again."
+},
+{
+"id": "driftboat",
+"title": "Drift boat angler",
+"cat": "river",
+"doc": "An angler in a drift boat hooks something enormous and gets towed upriver. A sturgeon, of course."
+},
+{
+"id": "loosekite",
+"title": "Loose kite",
+"cat": "river",
+"doc": "A kiter lets go: the kite sails off over town, tumbling, lines trailing."
+},
+{
+"id": "lograft",
+"title": "Log raft",
+"cat": "river",
+"doc": "A tug pushes a long raft of logs slowly downriver."
+},
+{
+"id": "supdog",
+"title": "SUP dog",
+"cat": "river",
+"doc": "A paddleboarder out for a cruise, with the dog riding up front, tail going."
+},
+{
+"id": "ducklings",
+"title": "Duck family",
+"cat": "wild",
+"doc": "A mother duck leads her ducklings across the river; a windsurfer has to swerve around them."
+},
+{
+"id": "snowman",
+"title": "Snowman",
+"cat": "season",
+"doc": "After a real snowfall someone builds a snowman on the sandbar: carrot nose, stick arms, a hat."
+},
+{
+"id": "paperplane",
+"title": "Paper airplane",
+"cat": "odd",
+"doc": "A paper airplane loops across the scene and lands on top of the clock."
+},
+{
+"id": "moonbow",
+"title": "Moonbow",
+"cat": "sky",
+"doc": "A moonbow: a pale white rainbow opposite a bright moon on a misty night. Rare and real."
+},
+{
+"id": "sundogs",
+"title": "Sun dogs",
+"cat": "sky",
+"doc": "Sun dogs: bright spots either side of a low winter sun, on a cold day with a thin icy haze."
+},
+{
+"id": "moonpair",
+"title": "Moon and planet",
+"cat": "sky",
+"doc": "When the moon passes close to Venus, Jupiter, Mars or Saturn, the pair gets a label."
+},
+{
+"id": "contrails",
+"title": "Sunset contrails",
+"cat": "sky",
+"doc": "Jet contrails lit pink and gold high overhead just after sunset."
+},
+{
+"id": "godrays",
+"title": "God rays",
+"cat": "sky",
+"doc": "Crepuscular rays: beams of light fanning down through breaking clouds in the late afternoon."
+},
+{
+"id": "climbers",
+"title": "Summit climbers",
+"cat": "season",
+"doc": "Climbing season on Mt. Hood: a string of headlamps creeping up the mountain before dawn."
+},
+{
+"id": "countdown",
+"title": "New Year's countdown",
+"cat": "holiday",
+"doc": "New Year's Eve: the last ten seconds counted down big in the sky, then fireworks."
+},
+{
+"id": "piday",
+"title": "Pi Day clock",
+"cat": "holiday",
+"doc": "Pi Day: at 3:14 on March 14 the clock briefly reads 3.14159."
+},
+{
+"id": "blackcat",
+"title": "Friday the 13th cat",
+"cat": "holiday",
+"doc": "Friday the 13th: a black cat strolls along the waterfront, stops, and looks right at you."
+},
+{
+"id": "aprilfools",
+"title": "April Fools' mirror",
+"cat": "holiday",
+"doc": "April Fools' Day: for one minute the whole scene is mirrored. The clock stays put."
+},
+{
+"id": "moonlanding",
+"title": "Moon landing day",
+"cat": "holiday",
+"doc": "July 20: a tiny lunar lander and flag sit on the moon, marking the 1969 landing."
+},
+{
+"id": "groundhog",
+"title": "Groundhog Day",
+"cat": "holiday",
+"doc": "Groundhog Day: a groundhog pops up on the sandbar. Sees its shadow in sun, and it's six more weeks."
+},
+{
+"id": "burp",
+"title": "Mt. Hood burps",
+"cat": "odd",
+"doc": "Very rare: Mt. Hood burps. A small, cheerful puff of glowing sparks from the summit, then quiet."
+},
+{
+"id": "dragon",
+"title": "Dragon",
+"cat": "odd",
+"doc": "A dragon circles Mt. Hood once, wings beating, with a puff of fire on the way round."
+},
+{
+"id": "timemachine",
+"title": "Time machine",
+"cat": "odd",
+"doc": "A car on the bridge hits 88 mph, vanishes in a flash, and leaves two trails of fire on the deck."
+},
+{
+"id": "pirates",
+"title": "Pirates",
+"cat": "odd",
+"doc": "A pirate ship chases the sternwheeler up the river, firing (and missing). Often, on Sept 19."
+}
+]

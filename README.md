@@ -41,6 +41,9 @@ values to compare with the board's Python. For testing, the page takes URL param
 - `src/eggs1.js` .. `src/eggs5.js` — all 96 eggs, ported from the board (`eggs_all.js` lists them).
 - `src/holidays.js`, `src/calendar.js` — the line under the clock (holidays, special days, sky events).
 - `src/skymath.js`, `src/skycalc.js` — lunar and solar eclipses, planets, the moon, meteor-shower radiants.
+- `src/main.js` — boots the page; its `Controller` holds a visitor's time, weather and wind overrides.
+- `src/panel.js`, `assets/eggs.json` — the Controls drawer and the eggs' titles and descriptions.
+- `src/show.js` — the egg show and the "good time" for each egg (a port of the board's `eggshow.py`).
 - `src/skyfeeds.js` — reads `assets/sky.json` and interpolates the live ISS, Starlink and comet positions.
 
 ## Live sky data
