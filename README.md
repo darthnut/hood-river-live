@@ -1,12 +1,17 @@
 # Hood River Live
 
-Hood River, Oregon, as live pixel art: the view south across the Columbia from the Washington shore,
+Hood River, Oregon, as live pixel art (256×96): the view south across the Columbia from the Washington shore,
 with the Hood River Bridge, the town and Mt. Hood. The sun, moon and weather follow what's really
 happening in Hood River, and it all runs in the visitor's browser.
 
 This is a browser port of the scene on a 256×64 LED panel (the private `led-matrix` project). The
 static layout in `assets/scene.json` is exported from that project's renderer
 (`tools/export_web.py`), so both show exactly the same town.
+
+The website's frame is 32 rows taller than the board's 256×64. The scene and the eggs still draw in the
+board's coordinates on a view of the bottom 64 rows (so everything calibrated on the board stays put),
+and the drawing helpers in `src/pix.js` let negative rows reach up into the extra sky. The sky, weather,
+sun and moon arcs, and the sky eggs use the whole height; the captions sit at the new top edge.
 
 ## Run it locally
 

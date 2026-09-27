@@ -1,6 +1,12 @@
-// Shared pixel helpers. An image is a Float32Array of W*H*3 floats in [0, 1], row-major RGB.
+// Shared pixel helpers. An image is a Float32Array of W*rows*3 floats in [0, 1], row-major RGB.
+//
+// The board is 256x64. The website adds TOP rows of sky above that frame (256x96 in all). The scene and
+// the eggs keep drawing in the board's coordinates on a "view" of the bottom 64 rows, so everything
+// calibrated on the board stays put, and the helpers here let negative rows reach up into the extra sky.
 
 export const W = 256, H = 64, HORIZON = 36;
+export const TOP = 32;           // extra sky rows on the website
+export const FULL_H = H + TOP;   // the website's frame height
 
 export const rgb = (r, g, b) => [r / 255, g / 255, b / 255];
 export const scale = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
@@ -10,20 +16,52 @@ export const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
 export const newImage = () => new Float32Array(W * H * 3);
 
-export function blend(img, x, y, c, a = 1) {
+// The current frame: the full website image and the board-coordinate view of its bottom 64 rows.
+let FULL = null, VIEW = null;
+export function setTarget(full, view) { FULL = full; VIEW = view; }
+export const getFull = () => FULL;
+export const getView = () => VIEW;
+
+// [array, index] of pixel (x, y), or null when it's off the image. On the board view, y runs from -TOP
+// (the top of the website's extra sky) to H - 1; on any other image, from 0 to its last row.
+export function at(img, x, y) {
+  if (x < 0 || x >= W || y >= img.length / (W * 3)) return null;
+  if (y >= 0) return [img, (y * W + x) * 3];
+  if (img === VIEW && y >= -TOP) return [FULL, ((y + TOP) * W + x) * 3]; // above the board frame
+  return null;
+}
+
+export function blend(img, x, y, c, a = 1) { // hot: kept allocation-free
   x = Math.round(x); y = Math.round(y);
-  if (x < 0 || x >= W || y < 0 || y >= H) return;
-  const i = (y * W + x) * 3;
-  img[i] = img[i] * (1 - a) + c[0] * a;
-  img[i + 1] = img[i + 1] * (1 - a) + c[1] * a;
-  img[i + 2] = img[i + 2] * (1 - a) + c[2] * a;
+  if (x < 0 || x >= W) return;
+  let m = img, i;
+  if (y >= 0) {
+    i = (y * W + x) * 3;
+    if (i >= img.length) return;
+  } else if (img === VIEW && y >= -TOP) {
+    m = FULL; i = ((y + TOP) * W + x) * 3; // above the board frame, in the extra sky
+  } else return;
+  m[i] = m[i] * (1 - a) + c[0] * a;
+  m[i + 1] = m[i + 1] * (1 - a) + c[1] * a;
+  m[i + 2] = m[i + 2] * (1 - a) + c[2] * a;
 }
 
 // Set a pixel exactly (integer coordinates, no rounding).
 export function put(img, x, y, c) {
-  if (x < 0 || x >= W || y < 0 || y >= H) return;
-  const i = (y * W + x) * 3;
-  img[i] = c[0]; img[i + 1] = c[1]; img[i + 2] = c[2];
+  const p = at(img, x, y);
+  if (p) { const [m, i] = p; m[i] = c[0]; m[i + 1] = c[1]; m[i + 2] = c[2]; }
+}
+
+// Read a pixel (black when it's off the image).
+export function get(img, x, y) {
+  const p = at(img, x, y);
+  return p ? [p[0][p[1]], p[0][p[1] + 1], p[0][p[1] + 2]] : [0, 0, 0];
+}
+
+// Add light to a pixel.
+export function lighten(img, x, y, c, k) {
+  const p = at(img, x, y);
+  if (p) { const [m, i] = p; m[i] += c[0] * k; m[i + 1] += c[1] * k; m[i + 2] += c[2] * k; }
 }
 
 export function line(img, x0, y0, x1, y1, c, a) {
@@ -57,13 +95,7 @@ export function text(img, x, y, s, color, alpha = 1) {
       for (let k = 0; k < 3; k++) {
         if (rows[r] & (4 >> k)) {
           for (const [dx, dy, c, a] of [[1, 1, BLACK, 0.7 * alpha], [0, 0, color, alpha]]) {
-            const px = x + k + dx, py = y + r + dy;
-            if (px >= 0 && px < W && py >= 0 && py < H) {
-              const i = (py * W + px) * 3;
-              img[i] = img[i] * (1 - a) + c[0] * a;
-              img[i + 1] = img[i + 1] * (1 - a) + c[1] * a;
-              img[i + 2] = img[i + 2] * (1 - a) + c[2] * a;
-            }
+            blend(img, x + k + dx, y + r + dy, c, a);
           }
         }
       }

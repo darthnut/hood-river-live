@@ -1,6 +1,6 @@
 // Easter eggs, batch 1 (the board's eggs.py): meteor, aurora, UFO, Sasquatch, salmon, sternwheeler,
 // rainbow, sky whale, steam, spider, mega jump, osprey (and the eagle), shark, humpback.
-import { W, H, HORIZON, rgb, blend, line, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, rgb, blend, lighten, line, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash } from "./eggs.js";
 
 const TAU = 2 * Math.PI;
@@ -11,7 +11,7 @@ export class Meteor extends Egg {
   allowed(c) { return Math.max(0, (c.night - 0.4) / 0.6); }
   begin(c) {
     const r = c.rng;
-    this.x = r.uniform(30, W - 30); this.y = r.uniform(2, 8);
+    this.x = r.uniform(30, W - 30); this.y = r.uniform(10 - TOP, 8);
     this.vx = r.choice([-1, 1]) * r.uniform(90, 140); this.vy = r.uniform(25, 45);
     return true;
   }
@@ -32,16 +32,14 @@ export class Aurora extends Egg {
     for (let x = 0; x < W; x++) {
       const edge = 20 + 3 * Math.sin(x * 0.035 + t * 0.2) + 2 * Math.sin(x * 0.011 - t * 0.13); // curtain bottom
       const rays = 0.6 + 0.4 * Math.sin(x * 0.3 + 2.5 * Math.sin(x * 0.04 + t * 0.5) + t * 0.9);
-      const height = 14 + 4 * Math.sin(x * 0.02 + t * 0.3);
-      for (let y = 0; y < HORIZON; y++) {
+      const height = 14 + TOP * 0.6 + 4 * Math.sin(x * 0.02 + t * 0.3);
+      for (let y = -TOP; y < HORIZON; y++) {
         const above = edge - y;
         const body = Math.min(1, Math.max(0, 1 - above / height)) * (above > -1 ? 1 : 0);
         const glow = body ** 1.5 + 0.8 * Math.exp(-((above / 1.3) ** 2));
         const up = Math.min(1, Math.max(0, above / height));
-        const k = glow * rays * 0.33 * fade, i = (y * W + x) * 3;
-        img[i] += (lo[0] * (1 - up) + hi[0] * up) * k;
-        img[i + 1] += (lo[1] * (1 - up) + hi[1] * up) * k;
-        img[i + 2] += (lo[2] * (1 - up) + hi[2] * up) * k;
+        const k = glow * rays * 0.33 * fade;
+        if (k > 0.002) lighten(img, x, y, [lo[0] * (1 - up) + hi[0] * up, lo[1] * (1 - up) + hi[1] * up, lo[2] * (1 - up) + hi[2] * up], k);
       }
     }
   }
@@ -197,7 +195,7 @@ export class SkyWhale extends Egg {
   layer = "mountain"; perHour = 0.08; duration = (W + 50) / 9;
   begin(c) { this.dir = c.rng.choice([-1, 1]); return true; }
   draw(img, c, age) {
-    const x = this.dir > 0 ? -30 + age * 9 : W + 4 - age * 9, y = 9 + Math.sin(age * 0.6) * 2.5;
+    const x = this.dir > 0 ? -30 + age * 9 : W + 4 - age * 9, y = 9 - TOP / 2 + Math.sin(age * 0.6) * 2.5;
     const lum = 0.55 + 0.45 * (1 - c.night);
     const pal = { b: mul(rgb(205, 190, 240), lum), t: mul(rgb(205, 190, 240), lum), l: mul(rgb(250, 235, 215), lum),
       e: rgb(20, 10, 30), d: mul(rgb(150, 140, 180), lum) };
@@ -238,10 +236,11 @@ export class Spider extends Egg {
   begin(c) { this.x = Math.trunc(c.rng.uniform(96, 156)); return true; }
   draw(img, c, age) {
     let y;
-    if (age < 3) y = -7 + 27 * (1 - (1 - age / 3) ** 3);
+    const top = -7 - TOP; // from the top of the frame
+    if (age < 3) y = top + (20 - top) * (1 - (1 - age / 3) ** 3);
     else if (age < 10) y = 20 + Math.sin((age - 3) * 2.2) * 1.2;
-    else y = 20 - (age - 10) / 4 * 30;
-    line(img, this.x + 3, 0, this.x + 3, y, rgb(210, 210, 220), 0.45);
+    else y = 20 - (age - 10) / 4 * (20 - top);
+    line(img, this.x + 3, -TOP, this.x + 3, y, rgb(210, 210, 220), 0.45);
     const glint = 0.6 + 0.4 * Math.sin(age * 5);
     const pal = { k: rgb(38, 36, 44), l: rgb(70, 58, 50), w: rgb(235, 235, 235), E: mul(rgb(255, 255, 255), glint), g: rgb(40, 210, 150) };
     sprite(img, this.x, Math.trunc(y), Spider.ROWS, pal);

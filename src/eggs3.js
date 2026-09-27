@@ -1,6 +1,6 @@
 // Easter eggs, batch 3 (the board's eggs_more2.py): rider mishaps, seasons and Gorge life, legends,
 // the real sky, holidays.
-import { W, H, HORIZON, rgb, blend, text, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, rgb, blend, text, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash, glow, landTop, skyXY, dayNumber } from "./eggs.js";
 import { Rng } from "./rng.js";
 import { MAT } from "./scene.js";
@@ -452,7 +452,7 @@ export class Wish extends Egg {
     const h = c.now.hour % 12 || 12, m = c.now.minute;
     return ((h === 11 && m === 11) || (h === 12 && m === 34)) && fresh(this, this.key(c)) ? 1 : 0;
   }
-  begin(c) { this.lastKey = this.key(c); this.x = c.rng.uniform(30, 120); this.y = c.rng.uniform(9, 12); return true; }
+  begin(c) { this.lastKey = this.key(c); this.x = c.rng.uniform(30, 120); this.y = c.rng.uniform(9 - TOP * 0.6, 12 - TOP * 0.3); return true; }
   draw(img, c, age) {
     const hx = this.x + age * 90, hy = this.y + age * 9, fade = Math.min(1, (this.duration - age) / 0.3);
     glow(img, hx, hy, 3, rgb(255, 250, 220), 0.5 * fade);

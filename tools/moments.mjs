@@ -1,12 +1,13 @@
 // Render eggs at chosen moments to a PNG contact sheet, from the command line (Node 18+).
-//   node tools/moments.mjs out.png "osprey@14:00@5" "ufo@2026-10-31 22:00@8" ...
+//   node tools/moments.mjs out.png "osprey@14:00@5" "ufo@2026-10-31 22:00@8" "-@13:00@2@rain" ...
+// Each spec is egg@time@seconds[@weather]; "-" renders no egg.
 // Mirrors the board's egg_moments.py: a steady 28 mph west wind, the clock held at the chosen time.
 import { readFileSync, writeFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
 import { Scene } from "../src/scene.js";
 import { ALL_EGGS } from "../src/eggs_all.js";
 import { hoodRiverTime } from "../src/sky.js";
-import { W, H, text } from "../src/pix.js";
+import { W, FULL_H as H, text } from "../src/pix.js";
 import { setSky } from "../src/skyfeeds.js";
 
 const [out, ...specs] = process.argv.slice(2);
@@ -22,15 +23,16 @@ const sheet = new Uint8Array(sheetW * sheetH * 3).fill(24);
 const logs = [];
 
 specs.forEach((spec, n) => {
-  const [name, at, age] = spec.split("@");
+  const [name, at, age, weather] = spec.split("@");
   const [datePart, timePart] = at.includes(" ") ? at.split(" ") : ["2026-09-26", at];
   const [y, m, d] = datePart.split("-").map(Number), [hh, mm] = timePart.split(":").map(Number);
   const now = hoodRiverTime(y, m, d, hh, mm);
   const sc = new Scene(data, { eggClasses: ALL_EGGS, eggRate: 0, log: s => logs.push(s) });
   sc.eggs.shared = false;
+  if (weather) sc.fx.override = weather;
   let t = 60, img;
   for (let k = 0; k < 20; k++, t += 0.05) sc.render(t, 0.05, wind, now);
-  sc.eggs.trigger(name);
+  if (name !== "-") sc.eggs.trigger(name);
   const start = t;
   do { img = sc.render(t, 0.05, wind, now); t += 0.05; } while (t - start < Number(age));
   // label strip, drawn with the scene's own font

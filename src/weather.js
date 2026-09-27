@@ -1,5 +1,7 @@
 // Live weather over the scene: live Open-Meteo readings, presets, and every weather effect.
-import { W, H, HORIZON, clamp } from "./pix.js";
+// Effects that cover the whole frame (clouds, fog, smoke, rain, snow, hail, flashes) take the website's
+// full image, TOP rows taller than the board's; rows there are board rows + TOP.
+import { W, H, HORIZON, TOP, clamp } from "./pix.js";
 import { PHASES, LAT, LON } from "./sky.js";
 import { Rng } from "./rng.js";
 
@@ -102,7 +104,7 @@ class Cloud {
       this.shade[y] = clamp(y / ch * 1.3 - 0.2, 0, 1); // lit tops, darker bellies
     }
     this.cw = cw; this.ch = ch;
-    this.y = Math.floor(r.uniform(1, 21));
+    this.y = Math.floor(r.uniform(1 - TOP * 0.9, 21)); // board rows; negative is the website's extra sky
     this.speed = r.uniform(0.6, 1.4) * (1.3 - this.y / 30);
     this.x = first ? r.uniform(-cw, W) : -cw - r.uniform(0, 60);
   }
@@ -116,8 +118,8 @@ export class WeatherFX {
   constructor(fogTex) {
     const r = this.rng = new Rng(5);
     this.clouds = Array.from({ length: WeatherFX.MAX_CLOUDS }, () => new Cloud(r, true));
-    this.drops = Array.from({ length: 320 }, () => [r.uniform(0, W), r.uniform(0, H), r.uniform(3, 6), r.uniform(0.8, 1.2)]);
-    this.flakes = Array.from({ length: 320 }, () => [r.uniform(0, W), r.uniform(0, H), r.uniform(0, 6.28), r.random()]);
+    this.drops = Array.from({ length: 460 }, () => [r.uniform(0, W), r.uniform(0, H + TOP), r.uniform(3, 6), r.uniform(0.8, 1.2)]);
+    this.flakes = Array.from({ length: 460 }, () => [r.uniform(0, W), r.uniform(0, H + TOP), r.uniform(0, 6.28), r.random()]);
     this.hail = Array.from({ length: 120 }, () => [r.uniform(0, W), r.uniform(0, H), r.uniform(40, 62), 0]);
     this.spray = Array.from({ length: 90 }, () => [0, 0, 0, 0, 0]); // x, y, vx, vy, life
     this.ripples = Array.from({ length: 40 }, () => [0, 0, -1]); // x, y, age (<0 = unused)
@@ -242,13 +244,13 @@ export class WeatherFX {
       if (c.x > W + 2) c.reset();
       if (i >= n) return;
       const x0 = Math.trunc(c.x), y0 = c.y;
-      for (let yy = Math.max(0, y0); yy < Math.min(HORIZON, y0 + c.ch); yy++) {
+      for (let yy = Math.max(-TOP, y0); yy < Math.min(HORIZON, y0 + c.ch); yy++) {
         const s = c.shade[yy - y0];
         const col = [0, 1, 2].map(j => lit[j] * (1 - s) + shade[j] * s);
         for (let xx = Math.max(0, x0); xx < Math.min(W, x0 + c.cw); xx++) {
           const a = c.alpha[(yy - y0) * c.cw + (xx - x0)] * opacity;
           if (a <= 0) continue;
-          const i3 = (yy * W + xx) * 3;
+          const i3 = ((yy + TOP) * W + xx) * 3;
           img[i3] = img[i3] * (1 - a) + col[0] * a;
           img[i3 + 1] = img[i3 + 1] * (1 - a) + col[1] * a;
           img[i3 + 2] = img[i3 + 2] * (1 - a) + col[2] * a;
@@ -263,16 +265,16 @@ export class WeatherFX {
       for (let y = 24; y < 44; y++) {
         const amp = wx.heat * 1.4 * Math.exp(-(((y - 35) / 5) ** 2));
         const shift = Math.round(Math.sin(t * 7 + y * 1.7) * amp);
-        if (shift) rollRow(img, y, shift);
+        if (shift) rollRow(img, y + TOP, shift);
       }
     }
     if (wx.smoke > 0) {
       const col = mixw(w, SMOKE), sep = 0.35 * wx.smoke;
-      for (let y = 0; y < H; y++) {
+      for (let y = -TOP; y < H; y++) {
         const depth = y < HORIZON ? clamp((y - 10) / 26, 0.2, 1) : clamp(1 - (y - HORIZON) / 40, 0.25, 1);
         const a = 0.8 * wx.smoke * depth;
         for (let x = 0; x < W; x++) {
-          const i = (y * W + x) * 3;
+          const i = ((y + TOP) * W + x) * 3;
           let r = img[i] * (1 - a) + col[0] * a, g = img[i + 1] * (1 - a) + col[1] * a, b = img[i + 2] * (1 - a) + col[2] * a;
           const lum = (r + g + b) / 3;
           img[i] = r * (1 - sep) + lum * 1.12 * sep;
@@ -295,6 +297,7 @@ export class WeatherFX {
   fog(img, w, t, night, wx, near) {
     const col = mixw(w, FOG);
     let glow = null;
+    const HT = H + TOP;
     if (night > 0.3 && !near) { // lights bloom into halos in the fog
       const lights = new Float32Array(img.length);
       for (let i = 0; i < img.length; i += 3) {
@@ -303,10 +306,10 @@ export class WeatherFX {
         }
       }
       glow = new Float32Array(img.length);
-      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      for (let y = 0; y < HT; y++) for (let x = 0; x < W; x++) {
         let r = 0, g = 0, b = 0;
         for (let dy = -1; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) {
-          const j = ((((y - dy) % H + H) % H) * W + (((x - dx) % W + W) % W)) * 3;
+          const j = ((((y - dy) % HT + HT) % HT) * W + (((x - dx) % W + W) % W)) * 3;
           r += lights[j]; g += lights[j + 1]; b += lights[j + 2];
         }
         const i = (y * W + x) * 3;
@@ -314,7 +317,7 @@ export class WeatherFX {
       }
     }
     const shift = Math.trunc(t * 3);
-    for (let y = 0; y < H; y++) {
+    for (let y = -TOP; y < H; y++) {
       let dens;
       if (wx.fog <= 0.6) { // river fog: a bank lying on the water and the waterfront
         const prof = y < HORIZON ? Math.exp(-(((y - HORIZON) / 5.5) ** 2)) : Math.exp(-(((y - HORIZON) / 10) ** 2));
@@ -324,8 +327,8 @@ export class WeatherFX {
       }
       if (near) dens *= 0.55;
       for (let x = 0; x < W; x++) {
-        const a = clamp(dens * (0.75 + 0.5 * this.fogTex[y * 512 + (x + shift) % 512]), 0, 0.97);
-        const i = (y * W + x) * 3;
+        const a = clamp(dens * (0.75 + 0.5 * this.fogTex[((y + H) % H) * 512 + (x + shift) % 512]), 0, 0.97);
+        const i = ((y + TOP) * W + x) * 3;
         img[i] = img[i] * (1 - a) + col[0] * a;
         img[i + 1] = img[i + 1] * (1 - a) + col[1] * a;
         img[i + 2] = img[i + 2] * (1 - a) + col[2] * a;
@@ -408,18 +411,18 @@ export class WeatherFX {
 
   drawHail(img, dt, wx, night) {
     if (!wx.hail) return;
-    const v = 0.5 + 0.5 * (1 - night);
+    const v = 0.5 + 0.5 * (1 - night), HT = H + TOP;
     for (const h of this.hail) {
       if (h[3] === 0) {
         h[1] += 120 * dt; h[0] += 15 * dt;
-        if (h[1] >= h[2]) h[3] = 0.001;
+        if (h[1] >= h[2] + TOP) h[3] = 0.001;
       } else {
         h[3] += dt;
         if (h[3] > 0.35) { h[3] = 0; h[1] = this.rng.uniform(-10, 0); h[0] = this.rng.uniform(0, W); }
       }
-      const y = Math.trunc(h[3] > 0 ? h[2] - Math.sin(Math.PI * h[3] / 0.35) * 3 : h[1]);
+      const y = Math.trunc(h[3] > 0 ? h[2] + TOP - Math.sin(Math.PI * h[3] / 0.35) * 3 : h[1]);
       const x = ((Math.trunc(h[0]) % W) + W) % W;
-      if (y >= 0 && y < H) {
+      if (y >= 0 && y < HT) {
         const j = (y * W + x) * 3;
         img[j] = img[j] * 0.2 + v * 0.8; img[j + 1] = img[j + 1] * 0.2 + v * 0.8; img[j + 2] = img[j + 2] * 0.2 + v * 0.8;
       }
@@ -474,20 +477,20 @@ export class WeatherFX {
 
   drawSnow(img, dt, snow, wf, night, t) {
     if (snow <= 0) return;
-    const n = Math.min(this.flakes.length, Math.trunc(50 + 250 * snow));
+    const n = Math.min(this.flakes.length, Math.trunc((50 + 250 * snow) * 1.4)), HT = H + TOP;
     const v = 0.45 + 0.55 * (1 - night), col = [0.96 * v, 0.97 * v, v], alpha = 0.85;
     for (let k = 0; k < n; k++) {
       const f = this.flakes[k];
       const near = f[3] > 0.8; // the nearest fifth: bigger and faster
       f[1] += (near ? 16 : 9) * (0.8 + 0.4 * f[3]) * dt;
       f[0] += (3 + 10 * wf) * dt + Math.sin(t * 1.3 + f[2]) * 4 * dt;
-      if (f[1] > H + 2) { f[1] -= H + 4; f[0] = this.rng.uniform(-20, W); }
+      if (f[1] > HT + 2) { f[1] -= HT + 4; f[0] = this.rng.uniform(-20, W); }
       f[0] = ((f[0] % (W + 10)) + (W + 10)) % (W + 10);
       const x = Math.trunc(f[0]), y = Math.trunc(f[1]);
       const pts = near ? [[0, 0], [1, 0], [0, 1], [1, 1]] : [[0, 0]];
       for (const [dx, dy] of pts) {
         const px = x + dx, py = y + dy;
-        if (px >= 0 && px < W && py >= 0 && py < H) {
+        if (px >= 0 && px < W && py >= 0 && py < HT) {
           const j = (py * W + px) * 3;
           img[j] = img[j] * (1 - alpha) + col[0] * alpha;
           img[j + 1] = img[j + 1] * (1 - alpha) + col[1] * alpha;
@@ -499,18 +502,18 @@ export class WeatherFX {
 
   drawRain(img, dt, rain, wf, night, t) {
     if (rain <= 0) return;
-    const n = Math.min(this.drops.length, rain > 0.05 ? Math.trunc(60 + 260 * rain) : 40);
+    const n = Math.min(this.drops.length, rain > 0.05 ? Math.trunc((60 + 260 * rain) * 1.4) : 56), HT = H + TOP;
     const slant = 0.25 + 0.35 * wf, speed = 95 + 40 * rain;
     const alpha = (0.22 + 0.2 * rain) * (0.45 + 0.55 * (1 - night));
     const col = RAIN_RGB.map(v => v * (0.35 + 0.65 * (1 - night)));
     for (let k = 0; k < n; k++) {
       const d = this.drops[k];
       d[1] += speed * d[3] * dt; d[0] += speed * d[3] * slant * dt;
-      if (d[1] > H + 4) { d[1] -= H + 8; d[0] = this.rng.uniform(-20, W); }
+      if (d[1] > HT + 4) { d[1] -= HT + 8; d[0] = this.rng.uniform(-20, W); }
       d[0] = ((d[0] % (W + 20)) + (W + 20)) % (W + 20);
       for (let step = 0; step < 5 && step < d[2]; step++) { // each streak is a short slanted line
         const xs = Math.trunc(d[0] - step * slant), ys = Math.trunc(d[1] - step);
-        if (xs >= 0 && xs < W && ys >= 0 && ys < H) {
+        if (xs >= 0 && xs < W && ys >= 0 && ys < HT) {
           const j = (ys * W + xs) * 3;
           img[j] = img[j] * (1 - alpha) + col[0] * alpha;
           img[j + 1] = img[j + 1] * (1 - alpha) + col[1] * alpha;
@@ -533,7 +536,7 @@ export class WeatherFX {
         const ang = k / 8 * 6.2832;
         const xx = Math.round(x + Math.cos(ang) * rad), yy = Math.round(y + Math.sin(ang) * rad * 0.35);
         if (xx >= 0 && xx < W && yy >= HORIZON && yy < H) {
-          const j = (yy * W + xx) * 3;
+          const j = ((yy + TOP) * W + xx) * 3;
           img[j] = img[j] * (1 - a) + RAIN_RGB[0] * a;
           img[j + 1] = img[j + 1] * (1 - a) + RAIN_RGB[1] * a;
           img[j + 2] = img[j + 2] * (1 - a) + RAIN_RGB[2] * a;

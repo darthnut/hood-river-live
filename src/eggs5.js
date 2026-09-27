@@ -1,6 +1,6 @@
 // Easter eggs, batch 5 (the board's eggs_more4.py): more Gorge life, rarer sky sights, lesser holidays,
 // and nonsense.
-import { W, H, HORIZON, rgb, blend, line, text, FONT, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, rgb, blend, lighten, line, text, FONT, getFull, getView, scale as mul } from "./pix.js";
 import { Egg, smoothFade, splash, disk, glow } from "./eggs.js";
 import { Scene } from "./scene.js";
 import { Fireworks } from "./eggs2.js";
@@ -334,7 +334,7 @@ export class Contrails extends Egg {
   static egg = "contrails";
   layer = "mountain"; duration = 50; perHour = 3;
   allowed(c) { return c.now.hour >= 12 && c.elev > -6 && c.elev < 0 && c.veil < 0.5 ? 1 : 0; }
-  begin(c) { const r = c.rng; this.jets = [0, 1].map(() => [r.uniform(-40, 60), r.uniform(4, 10), r.uniform(0.15, 0.3), r.uniform(0, 12)]); return true; }
+  begin(c) { const r = c.rng; this.jets = [0, 1].map(() => [r.uniform(-40, 60), r.uniform(4 - TOP * 0.6, 10 - TOP * 0.3), r.uniform(0.15, 0.3), r.uniform(0, 12)]); return true; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 6);
     for (const [x0, y0, slope, t0] of this.jets) {
@@ -358,15 +358,13 @@ export class GodRays extends Egg {
   allowed(c) { return c.wx && c.wx.cc > 0.3 && c.wx.cc < 0.75 && c.now.hour >= 12 && c.elev > 3 && c.elev < 25 ? 1 : 0; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 10), [sx, sy] = c.elev > 0 ? [c.sx, c.sy - 6] : [180, 4];
-    for (let y = 0; y < HORIZON; y++) {
+    for (let y = -TOP; y < HORIZON; y++) {
       const below = Math.min(1, Math.max(0, (y - sy) / 20));
       if (below <= 0) continue;
       for (let x = 0; x < W; x++) {
         const ang = Math.atan2(y - sy, x - sx);
         const a = Math.max(0, Math.sin(ang * 23 + 0.3 * Math.sin(age * 0.2)) * Math.sin(ang * 9 + 1.1)) * below * 0.24 * fade;
-        if (a <= 0) continue;
-        const i = (y * W + x) * 3;
-        img[i] += a; img[i + 1] += 0.92 * a; img[i + 2] += 0.75 * a;
+        if (a > 0) lighten(img, x, y, [1, 0.92, 0.75], a);
       }
     }
   }
@@ -400,7 +398,7 @@ export class Countdown extends Egg {
       const n = String(10 - Math.trunc(age)), pulse = 1 - (age % 1) * 0.5;
       bigText(img, W / 2 - n.length * 6, 12, n, mul(rgb(255, 230, 120), pulse), 3);
     } else {
-      this.fw.draw(img, c, age - 10);
+      this.fw.draw(getView(), c, age - 10); // the fireworks draw in the scene's own coordinates
       if (age < 22) bigText(img, W / 2 - 13 * 4, 13, "HAPPY NEW YEAR", rgb(255, 220, 90), 2, Math.min(1, (22 - age) / 2));
     }
   }
@@ -449,7 +447,8 @@ export class AprilFools extends Egg {
   layer = "top"; duration = 60; perHour = 2;
   allowed(c) { return isDay(c, 4, 1) ? 1 : 0; }
   draw(img) { // the whole scene mirrored for a minute; the clock is drawn after, so it stays put
-    for (let y = 0; y < H; y++) for (let x = 0; x < W / 2; x++) {
+    img = getFull();
+    for (let y = 0; y < H + TOP; y++) for (let x = 0; x < W / 2; x++) {
       const a = (y * W + x) * 3, b = (y * W + W - 1 - x) * 3;
       for (let k = 0; k < 3; k++) { const t = img[a + k]; img[a + k] = img[b + k]; img[b + k] = t; }
     }

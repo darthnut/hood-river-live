@@ -1,6 +1,6 @@
 // Easter eggs, batch 2 (the board's eggs_more.py): Gorge wildlife and history, calendar specials, and
 // a few just for fun.
-import { W, H, HORIZON, rgb, blend, line, text, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, rgb, blend, line, text, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash, disk, glow, dayNumber } from "./eggs.js";
 import { Rng } from "./rng.js";
 import { hoodRiverTime, localParts } from "./sky.js";
@@ -273,7 +273,7 @@ export class Fireworks extends Egg {
       const count = r.random() < 0.35 ? 2 : 1;
       for (let q = 0; q < count; q++) {
         const n = r.integers(32, 50);
-        this.bursts.push({ x: r.uniform(30, W - 30), y: r.uniform(5, 19), t: age, launch: 0.6,
+        this.bursts.push({ x: r.uniform(30, W - 30), y: r.uniform(5 - TOP * 0.6, 19), t: age, launch: 0.6,
           col: rgb(...Fireworks.PALETTE[r.integers(Fireworks.PALETTE.length)]),
           // each spark at its own speed so the burst fills in, not a hollow ring
           dirs: Array.from({ length: n }, () => { const a = r.uniform(0, 2 * Math.PI); return [Math.cos(a), Math.sin(a), r.uniform(0.35, 1)]; }),
@@ -426,12 +426,12 @@ export class Satellites extends Egg {
   static egg = "satellites";
   layer = "sky"; duration = 26; perHour = 0.4; exclusive = false;
   allowed(c) { return c.night > 0.6 && c.veil < 0.5 ? 1 : 0; }
-  begin(c) { this.y0 = c.rng.uniform(10, 22); this.slope = c.rng.uniform(-0.35, -0.1); this.n = c.rng.integers(20, 30); return true; }
+  begin(c) { this.y0 = c.rng.uniform(10 - TOP, 22); this.slope = c.rng.uniform(-0.35, -0.1); this.n = c.rng.integers(20, 30); return true; }
   draw(img, c, age) {
     const head = -10 + age * 13;
     for (let k = 0; k < this.n; k++) {
       const x = head - k * 4.2, y = this.y0 + x * this.slope * 0.25;
-      if (x >= 0 && x < W && y >= 0 && y < HORIZON) blend(img, x, y, rgb(235, 238, 255), 0.75 * (0.8 + 0.2 * Math.sin(age * 3 + k)));
+      if (x >= 0 && x < W && y >= -TOP && y < HORIZON) blend(img, x, y, rgb(235, 238, 255), 0.75 * (0.8 + 0.2 * Math.sin(age * 3 + k)));
     }
   }
 }

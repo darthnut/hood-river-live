@@ -1,6 +1,6 @@
 // Easter eggs, batch 4 (the board's eggs_more3.py): Gorge weather and seasons, the real night sky, and
 // some silliness.
-import { W, H, HORIZON, rgb, blend, line, text, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, rgb, blend, line, text, get, put, getFull, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash, disk, glow, landTop, skyXY } from "./eggs.js";
 import { MAT, Scene } from "./scene.js";
 import { Rainbow, Sasquatch, Sternwheeler } from "./eggs1.js";
@@ -308,7 +308,8 @@ export class MeteorShower extends Egg {
     this.meteors = Array.from({ length: this.burst ? 42 : 1 }, () => {
       let x, y;
       for (let tries = 0; tries < 20; tries++) { // start in open sky: the mountain hides meteors behind it
-        x = r.uniform(4, W - 4); y = r.uniform(9, 26);
+        x = r.uniform(4, W - 4); y = r.uniform(10 - TOP, 26);
+        if (y < 0) break; // the website's extra sky is all open
         const ground = landTop(c.scene, x);
         if (mtn[Math.trunc(y) * W + Math.trunc(x)] === 0 && !(ground !== null && ground <= y)) break;
       }
@@ -398,20 +399,22 @@ export class SolarEclipse extends Egg {
       mdx = s.dx / s.rSun; mdy = s.dy / s.rSun; rm = s.rMoon / s.rSun;
     }
     const R = 5.5, sx = c.sx, sy = c.sy, mx = sx + mdx * R, my = sy - mdy * R; // the scene's sun disc radius
-    const si = (Math.max(0, Math.trunc(sy) - 10) * W + Math.trunc(Math.min(W - 1, Math.max(0, sx + 12)))) * 3;
-    const sky = [img[si] * 0.8, img[si + 1] * 0.8, img[si + 2] * 0.8];
+    const sky = get(img, Math.trunc(Math.min(W - 1, Math.max(0, sx + 12))), Math.max(-TOP, Math.trunc(sy) - 10)).map(v => v * 0.8);
     let covered = 0;
     for (let yy = Math.trunc(my - R * rm) - 1; yy < Math.trunc(my + R * rm) + 2; yy++) {
       for (let xx = Math.trunc(mx - R * rm) - 1; xx < Math.trunc(mx + R * rm) + 2; xx++) {
-        if (xx < 0 || xx >= W || yy < 0 || yy >= HORIZON || (xx - mx) ** 2 + (yy - my) ** 2 > (R * rm) ** 2) continue;
+        if (xx < 0 || xx >= W || yy < -TOP || yy >= HORIZON || (xx - mx) ** 2 + (yy - my) ** 2 > (R * rm) ** 2) continue;
         if ((xx - sx) ** 2 + (yy - sy) ** 2 <= (R + 3) ** 2) {
-          img.set(sky, (yy * W + xx) * 3);
+          put(img, xx, yy, sky);
           if ((xx - sx) ** 2 + (yy - sy) ** 2 <= R * R) covered++;
         }
       }
     }
     const frac = covered / (Math.PI * R * R);
-    if (frac > 0.6) { const k = 1 - 0.5 * (frac - 0.6) / 0.4; for (let i = 0; i < img.length; i++) img[i] *= k; } // strange, dim light
+    if (frac > 0.6) { // strange, dim light
+      const k = 1 - 0.5 * (frac - 0.6) / 0.4, all = getFull();
+      for (let i = 0; i < all.length; i++) all[i] *= k;
+    }
   }
 }
 

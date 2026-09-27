@@ -1,5 +1,5 @@
 // Easter-egg framework: the manager, plus helpers the eggs and the rider code share.
-import { blend, rgb } from "./pix.js";
+import { blend, rgb, TOP } from "./pix.js";
 import { Rng } from "./rng.js";
 
 export const smoothFade = (age, duration, edge) => Math.max(0, Math.min(1, age / edge, (duration - age) / edge));
@@ -42,9 +42,10 @@ export function landTop(scene, x, codes = null) {
   return null;
 }
 
-// Screen position for an azimuth/elevation, facing south: east left, south centre, west right,
-// kept below the caption row.
-export const skyXY = (az, el) => [(((az % 360) + 360) % 360) / 360 * 256, Math.max(10, 28 - el * 0.3)];
+// Screen position for an azimuth/elevation, facing south: east left, south centre, west right. Low in
+// the sky it matches the board; higher up it climbs into the website's extra sky, below the caption rows.
+export const skyXY = (az, el) => [(((az % 360) + 360) % 360) / 360 * 256,
+  Math.max(10 - TOP, el <= 20 ? 28 - el * 0.3 : 22 - (el - 20) * 0.6)];
 
 // Days since 1970-01-01 for a calendar date, for comparing dates.
 export const dayNumber = (y, m, d) => Math.round(Date.UTC(y, m - 1, d) / 86400000);

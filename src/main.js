@@ -1,6 +1,6 @@
 // Boot the scene and run it at 20 fps in the page.
 // URL parameters, for testing: ?at=HH:MM  ?date=YYYY-MM-DD  ?speed=60  ?weather=rain  ?wind=25  ?egg=NAME
-import { W, H } from "./pix.js";
+import { W, FULL_H } from "./pix.js";
 import { Scene } from "./scene.js";
 import { LiveWind, PRESETS } from "./weather.js";
 import { hoodRiverTime, localParts } from "./sky.js";
@@ -36,7 +36,7 @@ export async function start(canvas, { onStatus = () => {} } = {}) {
   for (const name of (q.get("egg") || "").split(",").filter(Boolean)) scene.eggs.trigger(name);
 
   const ctx = canvas.getContext("2d");
-  const out = ctx.createImageData(W, H);
+  const out = ctx.createImageData(W, FULL_H);
   const started = Date.now();
   let last = performance.now(), worst = 0, frames = 0;
 

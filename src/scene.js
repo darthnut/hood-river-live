@@ -1,7 +1,7 @@
 // Hood River from the Washington shore: the live scene, drawn every frame.
 // A port of the board's renderer (led-matrix tools/gorge.py + town.py); the static layout comes from
 // assets/scene.json, exported from the Python so both show exactly the same town.
-import { W, H, HORIZON, rgb, blend, line, text, gradient, clamp, decodeB64, newImage } from "./pix.js";
+import { W, H, HORIZON, TOP, FULL_H, rgb, blend, line, text, gradient, clamp, decodeB64, setTarget } from "./pix.js";
 import { Rng } from "./rng.js";
 import { skyState, phaseWeights, mixp, PHASES, SKY, MOUNTAIN, DEEP_WATER, SUN_GLOW, SUN_DISC, localParts, MONTHS } from "./sky.js";
 import { WeatherFX } from "./weather.js";
@@ -32,6 +32,10 @@ export function shade(day, w) {
     + w.twi * (c[k] * 0.42 + [0.06, 0.04, 0.12][k]) + w.night * (c[k] * 0.12 + [0.01, 0.015, 0.04][k]));
 }
 const sc3 = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+
+// The website's taller sky: each time-of-day gradient continues up past the board's top row to a deeper zenith.
+const ZENITH = { night: [1, 2, 7], twi: [6, 6, 26], gold: [8, 5, 28], day: [22, 70, 168] };
+const SKY_TALL = Object.fromEntries(PHASES.map(p => [p, [[0, ZENITH[p]], ...SKY[p].map(([y, c]) => [y + TOP, c])]]));
 
 // ---------------------------------------------------------------- riders
 
@@ -85,10 +89,12 @@ export class Scene {
     this.labels = labels; // (ms) -> [[text, [r,g,b]], ...] for the line under the clock
 
     const rng = this.rng = new Rng(7);
-    this.skies = Object.fromEntries(PHASES.map(p => [p, gradient(SKY[p], HORIZON)]));
+    this.skies = Object.fromEntries(PHASES.map(p => [p, gradient(SKY_TALL[p], HORIZON + TOP)]));
+    const sr = new Rng(13); // more stars for the website's extra sky
+    for (let k = 0; k < 90; k++) this.stars.push([sr.integers(W), sr.integers(-TOP, 0), sr.uniform(0, 6.28), sr.uniform(0.8, 2.5)]);
     this.sailors = Array.from({ length: 10 }, () => new Sailor(rng));
     this.kiters = Array.from({ length: 3 }, () => new Sailor(rng, true));
-    this.streaks = Array.from({ length: 40 }, () => [rng.uniform(0, W), rng.uniform(4, 63), rng.uniform(5, 14), rng.uniform(0.7, 1.4)]);
+    this.streaks = Array.from({ length: 40 }, () => [rng.uniform(0, W), rng.uniform(4 - TOP, 63), rng.uniform(5, 14), rng.uniform(0.7, 1.4)]);
     this.birds = Array.from({ length: 3 }, () => [rng.uniform(-60, W), rng.uniform(8, 20), rng.uniform(5, 9)]);
     this.eggs = new Eggs(eggClasses, new Rng((Date.now() & 0xffffffff) >>> 0), eggRate, log);
     this.solid = new Uint8Array(W * H);
@@ -97,8 +103,11 @@ export class Scene {
     this.groundSnow = 0;
   }
 
-  static arc(haDeg, elev) { // screen position for a sun or moon: east (morning) left, west right
-    return [128 + haDeg / 115 * 130, Math.max(5.0, 26 - elev * 0.5)];
+  // Screen position for a sun or moon: east (morning) left, west right. Near the horizon it matches the
+  // board exactly; higher up it climbs into the website's extra sky.
+  static arc(haDeg, elev) {
+    const y = elev <= 10 ? 26 - elev * 0.5 : 21 - (elev - 10) * 0.8;
+    return [128 + haDeg / 115 * 130, Math.max(5 - TOP, y)];
   }
   arc(haDeg, elev) { return Scene.arc(haDeg, elev); }
 
@@ -124,16 +133,19 @@ export class Scene {
     const nKite = Math.round(clamp(Math.floor(mph / 15), 1, 2) * activity);
     if (mph > 30) nSail = Math.min(nSail, 3);
     const riders = [...this.sailors.slice(0, nSail), ...this.kiters.slice(0, nKite)];
-    const img = newImage();
+    // The website's frame is TOP rows taller than the board's. Everything below draws in the board's
+    // coordinates on `img`, a view of the bottom 64 rows; negative rows reach the extra sky (see pix.js).
+    const full = new Float32Array(W * FULL_H * 3), img = full.subarray(TOP * W * 3);
+    setTarget(full, img);
 
-    // --- sky
-    const base = Array.from({ length: HORIZON }, (_, y) =>
+    // --- sky, from the top of the extra sky down to the horizon
+    const base = Array.from({ length: HORIZON + TOP }, (_, y) =>
       [0, 1, 2].map(k => PHASES.reduce((s, p) => s + w[p] * this.skies[p][y][k], 0)));
-    const sky = this.fx.sky(base, w, wx);
-    for (let y = 0; y < HORIZON; y++) for (let x = 0; x < W; x++) img.set(sky[y], (y * W + x) * 3);
+    const skyAll = this.fx.sky(base, w, wx), sky = skyAll.slice(TOP);
+    for (let y = 0; y < HORIZON + TOP; y++) for (let x = 0; x < W; x++) full.set(skyAll[y], (y * W + x) * 3);
     if (night > 0.02) {
       for (const [x, y, ph, sp] of this.stars) {
-        blend(img, x, y, rgb(255, 245, 230), night * (1 - veil) * (1 - y / 17) * (0.5 + 0.35 * Math.sin(t * sp + ph)));
+        blend(img, x, y, rgb(255, 245, 230), night * (1 - veil) * (1 - (y + TOP) / (17 + TOP)) * (0.5 + 0.35 * Math.sin(t * sp + ph)));
       }
     }
 
@@ -144,14 +156,14 @@ export class Scene {
     const sunf = WeatherFX.sunFactor(wx);
     const strength = (0.55 * w.gold + 0.3 * w.twi + 0.25 * w.day) * sunf;
     const [show, discCol] = WeatherFX.disc(wx, mixp(w, SUN_DISC));
-    for (let y = 0; y < HORIZON; y++) for (let x = 0; x < W; x++) {
+    for (let y = -TOP; y < HORIZON; y++) for (let x = 0; x < W; x++) {
       const d2 = (x - sx) ** 2 + ((y - sy) * 1.3) ** 2;
-      const i = (y * W + x) * 3, g = strength * Math.exp(-d2 / (2 * glowR * glowR));
-      img[i] += glow[0] * g; img[i + 1] += glow[1] * g; img[i + 2] += glow[2] * g;
+      const i = ((y + TOP) * W + x) * 3, g = strength * Math.exp(-d2 / (2 * glowR * glowR));
+      full[i] += glow[0] * g; full[i + 1] += glow[1] * g; full[i + 2] += glow[2] * g;
       if (elev > -1 && d2 < 5.5 * 5.5) {
-        img[i] = img[i] * (1 - show) + discCol[0] * show;
-        img[i + 1] = img[i + 1] * (1 - show) + discCol[1] * show;
-        img[i + 2] = img[i + 2] * (1 - show) + discCol[2] * show;
+        full[i] = full[i] * (1 - show) + discCol[0] * show;
+        full[i + 1] = full[i + 1] * (1 - show) + discCol[1] * show;
+        full[i + 2] = full[i + 2] * (1 - show) + discCol[2] * show;
       }
     }
 
@@ -166,9 +178,9 @@ export class Scene {
       const fade = (1 - 0.7 * w.day) * clamp(1 - 1.1 * veil ** 1.5, 0, 1);
       const k0 = 0.25 * night * (1 - veil), mcol = rgb(150, 160, 200);
       if (k0 > 0) {
-        for (let y = 0; y < HORIZON; y++) for (let x = 0; x < W; x++) {
-          const g = k0 * Math.exp(-((x - mx) ** 2 + (y - my) ** 2) / 98), i = (y * W + x) * 3;
-          img[i] += mcol[0] * g; img[i + 1] += mcol[1] * g; img[i + 2] += mcol[2] * g;
+        for (let y = -TOP; y < HORIZON; y++) for (let x = 0; x < W; x++) {
+          const g = k0 * Math.exp(-((x - mx) ** 2 + (y - my) ** 2) / 98), i = ((y + TOP) * W + x) * 3;
+          full[i] += mcol[0] * g; full[i + 1] += mcol[1] * g; full[i + 2] += mcol[2] * g;
         }
       }
       const c = Math.cos(2 * Math.PI * mphase), waxing = mphase < 0.5;
@@ -207,7 +219,7 @@ export class Scene {
       if (hide > 0) col = col.map((v, k) => v * (1 - hide) + sky[y][k] * hide);
       img.set(col, p * 3);
     }
-    this.fx.drawClouds(img, w, dt, wx, wf);
+    this.fx.drawClouds(full, w, dt, wx, wf);
     this.eggs.draw("mountain", img, egg);
 
     const dim = 0.35 + 0.65 * (1 - night);
@@ -284,9 +296,9 @@ export class Scene {
     this.eggs.draw("water", img, egg);
     if (rain > 0 || wx.storm) {
       const k = 1 - 0.2 * rain - 0.15 * wx.storm;
-      for (let i = 0; i < img.length; i++) img[i] *= k;
+      for (let i = 0; i < full.length; i++) full[i] *= k;
     }
-    this.fx.atmosphere(img, w, t, night, wx);
+    this.fx.atmosphere(full, w, t, night, wx);
     const flash = this.fx.drawLightning(img, t, dt, wx);
     if (wx.rainbowNow) this.eggs.trigger("rainbow");
 
@@ -306,30 +318,30 @@ export class Scene {
         if (Math.abs(img[i] - before[i]) + Math.abs(img[i + 1] - before[i + 1]) + Math.abs(img[i + 2] - before[i + 2]) > 0.05) solid[p] = 1;
       }
     }
-    this.fx.atmosphereNear(img, w, t, night, wx);
-    this.fx.drawRain(img, dt, rain, wf, night, t);
-    this.fx.drawSnow(img, dt, snow, wf, night, t);
-    this.fx.drawHail(img, dt, wx, night);
+    this.fx.atmosphereNear(full, w, t, night, wx);
+    this.fx.drawRain(full, dt, rain, wf, night, t);
+    this.fx.drawSnow(full, dt, snow, wf, night, t);
+    this.fx.drawHail(full, dt, wx, night);
     if (wx.ice) this.fx.drawGlaze(img, t, wx, night, solid);
     this.fx.drawSpray(img, dt, mph, night);
     this.eggs.draw("top", img, egg);
-    WeatherFX.flash(img, flash);
+    WeatherFX.flash(full, flash);
 
     // --- captions: clock and date top-left, wind top-right
     const h12 = now.hour % 12 || 12;
     const clock = `${h12}:${String(now.minute).padStart(2, "0")} ${now.hour < 12 ? "AM" : "PM"}`;
     const date = `${now.weekdayName} ${MONTHS[now.month - 1]} ${now.day}`;
-    let x = text(img, 3, 2, clock, [1, 1, 1], 0.95);
-    x = text(img, x + 5, 2, date, rgb(215, 215, 235), 0.8);
+    let x = text(full, 3, 2, clock, [1, 1, 1], 0.95);
+    x = text(full, x + 5, 2, date, rgb(215, 215, 235), 0.8);
     if (wind.live && !wind.demo) { // live temperature ("*" is the degree sign)
       const f = clamp((wind.temp - 30) / 60, 0, 1);
       const tint = [0, 1, 2].map(k => rgb(170, 205, 255)[k] * (1 - f) + rgb(255, 205, 150)[k] * f);
-      text(img, x + 5, 2, `${Math.round(wind.temp)}*F`, tint, 0.95);
+      text(full, x + 5, 2, `${Math.round(wind.temp)}*F`, tint, 0.95);
     }
     const days = this.labels ? this.labels(nowMs) : [];
     if (days.length) {
       const [label, col] = days[Math.trunc(t / 6) % days.length];
-      text(img, 3, 10, label, rgb(...col), 0.9);
+      text(full, 3, 10, label, rgb(...col), 0.9);
     }
     const word = wx.label || WeatherFX.caption(wx);
     let cap;
@@ -337,9 +349,9 @@ export class Scene {
     else cap = `WIND ${Math.round(mph)} MPH ${wind.compass()}  GUST ${Math.round(wind.gust)}`;
     if (word) cap = `${word}  ${cap}`;
     if (wx.label || wind.demo) cap = "DEMO " + cap;
-    text(img, W - 3 - cap.length * 4 + 1, 2, cap, [1, 1, 1], wind.live ? 0.9 : 0.45);
-    this.eggs.draw("over", img, egg);
-    return img;
+    text(full, W - 3 - cap.length * 4 + 1, 2, cap, [1, 1, 1], wind.live ? 0.9 : 0.45);
+    this.eggs.draw("over", full, egg); // eggs that play with the caption use the frame's own coordinates
+    return full;
   }
 
   // ---------------------------------------------------------------- land

@@ -6,7 +6,7 @@
 <style>
   body { margin: 0; padding: 12px 16px; background: #111317; color: #ddd; font: 12px system-ui, sans-serif; }
   .grid { display: grid; grid-template-columns: repeat(2, 768px); gap: 10px 8px; }
-  canvas { width: 768px; height: 192px; image-rendering: pixelated; display: block; }
+  canvas { width: 768px; height: 288px; image-rendering: pixelated; display: block; }
   .label { margin: 2px 0; }
 </style>
 </head>
@@ -18,7 +18,7 @@
   import { Scene } from "./src/scene.js";
   import { ALL_EGGS } from "./src/eggs_all.js";
   import { hoodRiverTime } from "./src/sky.js";
-  import { W, H } from "./src/pix.js";
+  import { W, FULL_H as H } from "./src/pix.js";
 
   const data = await (await fetch("./assets/scene.json")).json();
   const specs = (new URLSearchParams(location.search).get("eggs") || "osprey@14:00@5").split(",");

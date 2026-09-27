@@ -23,7 +23,7 @@
   h1 { font: 400 clamp(22px, 4vw, 32px)/1 var(--display); color: var(--amber); margin: 0; letter-spacing: .02em; }
   .sub { color: var(--dim); margin: 0; }
   .panel { position: relative; background: #000; border-radius: 10px; padding: clamp(6px, 1.2vw, 14px); box-shadow: 0 0 0 1px var(--line); }
-  .panel canvas { display: block; width: 100%; aspect-ratio: 4 / 1; image-rendering: pixelated; }
+  .panel canvas { display: block; width: 100%; aspect-ratio: 8 / 3; image-rendering: pixelated; }
   #dots { position: absolute; pointer-events: none; }
   .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   button { font: 500 13px var(--body); color: var(--text); background: #171b21; border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; cursor: pointer; }
@@ -40,7 +40,7 @@
     <p class="sub">The real sky, the real weather, right now.</p>
   </header>
   <div class="panel" id="panel">
-    <canvas id="px" width="256" height="64" aria-label="Pixel-art view of Hood River, Oregon, across the Columbia River"></canvas>
+    <canvas id="px" width="256" height="96" aria-label="Pixel-art view of Hood River, Oregon, across the Columbia River"></canvas>
     <canvas id="dots"></canvas>
   </div>
   <div class="bar">
@@ -67,7 +67,7 @@
     const s = dots.width / 256;
     g.fillStyle = "#000"; g.fillRect(0, 0, dots.width, dots.height);
     g.globalCompositeOperation = "destination-out";
-    for (let y = 0; y < 64; y++) for (let x = 0; x < 256; x++) { g.beginPath(); g.arc((x + .5) * s, (y + .5) * s, s * .36, 0, 6.2832); g.fill(); }
+    for (let y = 0; y < 96; y++) for (let x = 0; x < 256; x++) { g.beginPath(); g.arc((x + .5) * s, (y + .5) * s, s * .36, 0, 6.2832); g.fill(); }
     g.globalCompositeOperation = "source-over";
   }
   addEventListener("resize", drawDots);
