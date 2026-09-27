@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Egg Review</title>
+<style>
+  body { margin: 0; padding: 12px 16px; background: #111317; color: #ddd; font: 12px system-ui, sans-serif; }
+  .grid { display: grid; grid-template-columns: repeat(2, 768px); gap: 10px 8px; }
+  canvas { width: 768px; height: 192px; image-rendering: pixelated; display: block; }
+  .label { margin: 2px 0; }
+</style>
+</head>
+<body>
+<p>Development only: renders eggs at chosen moments, like the board's egg_moments.py.
+<code>?eggs=name@HH:MM@age,name@YYYY-MM-DD HH:MM@age</code></p>
+<div class="grid" id="grid"></div>
+<script type="module">
+  import { Scene } from "./src/scene.js";
+  import { ALL_EGGS } from "./src/eggs_all.js";
+  import { hoodRiverTime } from "./src/sky.js";
+  import { W, H } from "./src/pix.js";
+
+  const data = await (await fetch("./assets/scene.json")).json();
+  const specs = (new URLSearchParams(location.search).get("eggs") || "osprey@14:00@5").split(",");
+  const wind = { speed: 28, gust: 36, dir: 270, cloud: 0, rain: 0, code: 0, snowfall: 0, snow_depth: 0,
+    visibility: 24000, temp: 60, pm25: 0, live: true, compass: () => "W" };
+  const log = [];
+  for (const spec of specs) {
+    const [name, at, age] = spec.split("@");
+    const [datePart, timePart] = at.includes(" ") ? at.split(" ") : ["2026-09-26", at];
+    const [y, m, d] = datePart.split("-").map(Number), [hh, mm] = timePart.split(":").map(Number);
+    const now = hoodRiverTime(y, m, d, hh, mm);
+    const sc = new Scene(data, { eggClasses: ALL_EGGS, eggRate: 0, log: s => log.push(s) });
+    sc.eggs.shared = false;
+    let t = 60, img;
+    for (let k = 0; k < 20; k++, t += 0.05) sc.render(t, 0.05, wind, now);
+    sc.eggs.trigger(name);
+    const start = t;
+    do { img = sc.render(t, 0.05, wind, now); t += 0.05; } while (t - start < Number(age));
+    const cell = document.createElement("div");
+    cell.innerHTML = `<div class="label">${name} ${at} +${age}s</div>`;
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d"), out = ctx.createImageData(W, H);
+    for (let i = 0, j = 0; i < img.length; i += 3, j += 4) { out.data[j] = img[i] * 255; out.data[j + 1] = img[i + 1] * 255; out.data[j + 2] = img[i + 2] * 255; out.data[j + 3] = 255; }
+    ctx.putImageData(out, 0, 0);
+    cell.appendChild(cv);
+    document.getElementById("grid").appendChild(cell);
+  }
+  document.title = "Egg Review (done)";
+  window.reviewLog = log;
+</script>
+</body>
+</html>

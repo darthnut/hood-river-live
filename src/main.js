@@ -4,6 +4,8 @@ import { W, H } from "./pix.js";
 import { Scene } from "./scene.js";
 import { LiveWind, PRESETS } from "./weather.js";
 import { hoodRiverTime, localParts } from "./sky.js";
+import { ALL_EGGS } from "./eggs_all.js";
+import { labels } from "./holidays.js";
 
 const FPS = 20;
 const T0 = Date.UTC(2026, 0, 1) / 1000; // scene time counts from here, so every visitor's barge is in the same place
@@ -11,7 +13,7 @@ const T0 = Date.UTC(2026, 0, 1) / 1000; // scene time counts from here, so every
 export async function start(canvas, { onStatus = () => {} } = {}) {
   const data = await (await fetch(new URL("../assets/scene.json", import.meta.url))).json();
   const q = new URLSearchParams(location.search);
-  const scene = new Scene(data, { log: m => console.log(m) });
+  const scene = new Scene(data, { eggClasses: ALL_EGGS, labels, log: m => console.log(m) });
   const fixedWind = q.get("wind");
   const wind = fixedWind ? { // a steady test wind from the west, in place of the live reading
     speed: Number(fixedWind), gust: Number(fixedWind) * 1.3, dir: 270, cloud: 0, rain: 0, code: 0, snowfall: 0,
