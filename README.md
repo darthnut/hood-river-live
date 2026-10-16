@@ -46,6 +46,14 @@ values to compare with the board's Python. For testing, the page takes URL param
 - `src/show.js` — the egg show and the "good time" for each egg (a port of the board's `eggshow.py`).
 - `src/skyfeeds.js` — reads `assets/sky.json` and interpolates the live ISS, Starlink and comet positions.
 
+## On a physical LED board
+
+`tools/board.mjs` runs the same scene at the LED board's own 256×64 size and streams it as DDP (UDP 4048), e.g.
+to a Raspberry Pi panel driver on the same machine. It sets `globalThis.GORGE_TOP = 0` before loading the scene,
+so the website's extra sky rows disappear and everything draws in the board's frame. It also adds what only the
+board has: birthdays from a private `birthdays.json`, and `egg.trigger` / `weather.trigger` files in its `--dir`
+(an egg name, `show` for the egg show, `live` to return to live). `--snap out.png` renders a still instead.
+
 ## Live sky data
 
 `tools/skyjob.py` precomputes the next 72 hours of visible ISS passes, freshly launched Starlink trains

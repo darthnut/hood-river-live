@@ -35,7 +35,7 @@ const sc3 = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 
 // The website's taller sky: each time-of-day gradient continues up past the board's top row to a deeper zenith.
 const ZENITH = { night: [1, 2, 7], twi: [6, 6, 26], gold: [8, 5, 28], day: [22, 70, 168] };
-const SKY_TALL = Object.fromEntries(PHASES.map(p => [p, [[0, ZENITH[p]], ...SKY[p].map(([y, c]) => [y + TOP, c])]]));
+const SKY_TALL = TOP ? Object.fromEntries(PHASES.map(p => [p, [[0, ZENITH[p]], ...SKY[p].map(([y, c]) => [y + TOP, c])]])) : SKY;
 
 // ---------------------------------------------------------------- riders
 
@@ -91,7 +91,7 @@ export class Scene {
     const rng = this.rng = new Rng(7);
     this.skies = Object.fromEntries(PHASES.map(p => [p, gradient(SKY_TALL[p], HORIZON + TOP)]));
     const sr = new Rng(13); // more stars for the website's extra sky
-    for (let k = 0; k < 90; k++) this.stars.push([sr.integers(W), sr.integers(-TOP, 0), sr.uniform(0, 6.28), sr.uniform(0.8, 2.5)]);
+    if (TOP) for (let k = 0; k < 90; k++) this.stars.push([sr.integers(W), sr.integers(-TOP, 0), sr.uniform(0, 6.28), sr.uniform(0.8, 2.5)]);
     this.sailors = Array.from({ length: 10 }, () => new Sailor(rng));
     this.kiters = Array.from({ length: 3 }, () => new Sailor(rng, true));
     this.streaks = Array.from({ length: 40 }, () => [rng.uniform(0, W), rng.uniform(4 - TOP, 63), rng.uniform(5, 14), rng.uniform(0.7, 1.4)]);

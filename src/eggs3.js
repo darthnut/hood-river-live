@@ -432,8 +432,14 @@ export class Thanksgiving extends Egg {
 export class Birthday extends Egg {
   static egg = "birthday";
   layer = "water"; duration = 32; perHour = 3; exclusive = false;
-  allowed() { return 0; }
-  begin(c) { this.msg = "HAPPY BIRTHDAY!"; this.fw = new Fireworks(); this.fw.begin(c); return true; }
+  // The website knows no birthdays. The LED board's runner sets Birthday.people = c => [names today].
+  static people = null;
+  allowed(c) { return Birthday.people && Birthday.people(c).length ? 1 : 0; }
+  begin(c) {
+    const names = Birthday.people ? Birthday.people(c) : [];
+    this.msg = names.length ? `HAPPY BIRTHDAY ${names.map(n => n.toUpperCase()).join(" AND ")}!` : "HAPPY BIRTHDAY!";
+    this.fw = new Fireworks(); this.fw.begin(c); return true;
+  }
   draw(img, c, age) {
     this.fw.draw(img, c, age);
     const x = W - age * 22, colors = [[255, 80, 80], [255, 200, 60], [90, 230, 120], [90, 170, 255], [220, 120, 255]];

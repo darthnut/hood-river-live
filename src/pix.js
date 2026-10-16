@@ -5,7 +5,9 @@
 // calibrated on the board stays put, and the helpers here let negative rows reach up into the extra sky.
 
 export const W = 256, H = 64, HORIZON = 36;
-export const TOP = 32;           // extra sky rows on the website
+// Extra sky rows on the website. The LED board runner (tools/board.mjs) sets globalThis.GORGE_TOP = 0 before
+// loading the scene, so the same code draws the board's own 256x64 frame.
+export const TOP = globalThis.GORGE_TOP ?? 32;
 export const FULL_H = H + TOP;   // the website's frame height
 
 export const rgb = (r, g, b) => [r / 255, g / 255, b / 255];
