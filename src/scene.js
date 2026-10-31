@@ -102,6 +102,8 @@ export class Scene {
     this.fx = new WeatherFX(Float32Array.from(decodeB64(data.fog_tex, Uint8Array), v => v / 255));
     this.cars = data.cars; this.bridgeCars = data.bridge_cars; this.masts = data.masts;
     this.sandbar = data.sandbar || null;
+    // the tug and barges' row: on the square board, in open water just below the sandbar's reach
+    this.bargeY = this.sandbar ? HORIZON + Math.ceil(this.sandbar.depth) + 3 : Math.round(ry(39));
     this.labels = labels; // (ms) -> [[text, [r,g,b]], ...] for the line under the clock
 
     const rng = this.rng = new Rng(7);
@@ -286,7 +288,7 @@ export class Scene {
     }
 
     // --- tug pushing barges upriver (leftward), lit after dark
-    const bx = this.bargeX(t), by = Math.round(ry(39));
+    const bx = this.bargeX(t), by = this.bargeY;
     const bargeC = sc3(rgb(55, 45, 40), dim), tugC = sc3(rgb(200, 60, 45), dim);
     for (let i = 0; i < 3; i++) {
       const x0 = Math.trunc(bx + i * 14);

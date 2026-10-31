@@ -202,13 +202,13 @@ export class Kraken extends Egg {
   static egg = "kraken";
   layer = "water"; duration = 9; perHour = 0.02;
   begin(c) { const bx = c.scene.bargeX(c.t); return bx > 10 && bx < W - (SQUARE ? 50 : 70); }
-  depthRow() { return Math.round(ry(39)) + 0.5; }
+  depthRow(c) { return c.scene.bargeY + 0.5; }
   draw(img, c, age) {
     const bx = c.scene.bargeX(c.t);
     const rise = age < 6.5 ? Math.min(1, age / 2) : Math.max(0, 1 - (age - 6.5) / 2.5);
     const lum = 0.5 + 0.5 * c.light, skin = mul(rgb(150, 50, 80), lum), sucker = mul(rgb(235, 170, 185), lum);
     [-4, 8, 20, 32, 44].forEach((off, k) => {
-      const baseX = bx + off, baseY = Math.round(ry(39)) + 1.5, length = 12 * rise * (0.8 + 0.3 * (k % 2));
+      const baseX = bx + off, baseY = c.scene.bargeY + 1.5, length = 12 * rise * (0.8 + 0.3 * (k % 2));
       let prev = null;
       for (let i = 0; i < Math.trunc(length * 2); i++) {
         const u = i / (length * 2), x = baseX + Math.sin(u * 3 + age * 2 + k) * 3 * u, y = baseY - u * length;
@@ -219,7 +219,7 @@ export class Kraken extends Egg {
       }
       if (prev && rise > 0.8) blend(img, prev[0] + 1, prev[1] + 1, skin, 1); // the curling tip
     });
-    if (age < 1.2) splash(img, bx + 20, Math.round(ry(39)) + 1, age / 1.2, 1.2);
+    if (age < 1.2) splash(img, bx + 20, c.scene.bargeY + 1, age / 1.2, 1.2);
   }
 }
 
