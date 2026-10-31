@@ -100,6 +100,7 @@ export class Scene {
     this.glints = toF(decodeB64(data.glints, Uint16Array));
     this.fx = new WeatherFX(Float32Array.from(decodeB64(data.fog_tex, Uint8Array), v => v / 255));
     this.cars = data.cars; this.bridgeCars = data.bridge_cars; this.masts = data.masts;
+    this.sandbar = data.sandbar || null;
     this.labels = labels; // (ms) -> [[text, [r,g,b]], ...] for the line under the clock
 
     const rng = this.rng = new Rng(7);
@@ -468,10 +469,17 @@ export class Scene {
     let sand = shade(DAY[SAND], w);
     const ground = this.groundSnow;
     if (ground > 0) sand = sand.map((v, k) => v * (1 - 0.9 * ground) + shade([236, 240, 248], w)[k] * 0.9 * ground);
-    const s0 = Math.round(rx(138)), s1 = Math.round(rx(178));
-    for (let x = s0; x < s1; x++) { // sandbar spit reaching into the Columbia from the river mouth
-      const depth = 2.6 * (SQUARE ? 0.8 : 1) * Math.sin(Math.PI * (x - s0) / (s1 - s0)) ** 0.7;
-      for (let y = HORIZON; y <= HORIZON + Math.round(depth); y++) blend(img, x, y, sc3(sand, 1 - 0.12 * (y - HORIZON)), 1);
+    // sandbar spit reaching into the Columbia from the river mouth; the square board's layout sets its own
+    const sb = this.sandbar || { x0: 138, x1: 178, depth: 2.6, peak: 0.5 };
+    const s0 = Math.round(sb.x0), s1 = Math.round(sb.x1), fade = this.sandbar ? 0.35 / Math.max(1, sb.depth) : 0.12;
+    for (let x = s0; x < s1; x++) {
+      const u = (x - s0) / (s1 - s0), v = u < sb.peak ? 0.5 * u / sb.peak : 0.5 + 0.5 * (u - sb.peak) / (1 - sb.peak);
+      const depth = sb.depth * Math.sin(Math.PI * v) ** (sb.taper ?? 0.7), bottom = HORIZON + Math.round(depth);
+      for (let y = HORIZON; y <= bottom; y++) blend(img, x, y, sc3(sand, 1 - fade * (y - HORIZON)), 1);
+      if (this.sandbar && depth >= 1) { // wet sand at the waterline, and a line of surf just off it
+        blend(img, x, bottom, sc3(sand, 0.62), 1);
+        if ((x + Math.trunc(t * 2)) % 3) blend(img, x, bottom + 1, [0.92, 0.95, 1], 0.35 * (1 - 0.6 * night));
+      }
     }
     for (let i = 0; i < 10; i++) blend(img, rx(96 + i), HORIZON + Math.sin(i / 9 * Math.PI) * 1.6 * KW, shade(DAY[ROCKS], w), 1); // the Hook
   }

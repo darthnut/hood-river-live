@@ -3,8 +3,26 @@
 // assets/scene.json), recomposed for a square: every landmark sits at half its old x, the sky is more than
 // twice as tall and Mt. Hood is drawn much bigger in it. The website never loads this file.
 //
-//   node tools/square_layout.mjs
+//   node tools/square_layout.mjs [--opts '{"ridgeLift": 4, ...}'] [--out file.json]
+//
+// --opts tries a variation on the layout (see OPTS below for the knobs; their values are the layout in use).
 import { writeFileSync } from "node:fs";
+
+const OPTS = {
+  summitY: 24,      // Mt. Hood's summit row
+  ridgeLift: 4,     // rows the far ridges rise above their mapped height
+  foothills: 16,    // rows of forested foothills rising between the far ridges and the orchards (0: none)
+  footL: 0.35, footR: 1.2, // how much of that height the east (left) and west (right) humps get
+  orchLift: 4,      // rows the orchard slopes behind town rise
+  townSpread: 1.7,  // how far up the hill the town climbs
+  eastHills: true,  // true: the dry hills east of town (behind the bridge) roll and rise to the left edge, dotted with oaks
+  slope: true,      // true: the orchards run the full width and rise steadily to the west, and the town climbs
+                    // evenly up them, instead of a dome centred on downtown
+  // in the 256x64 board's columns; depth in rows; peak 0..1 along it; taper > 0.7 sharpens the tip
+  sandbar: { x0: 136, x1: 226, depth: 9, peak: 0.1, taper: 1.9 },
+};
+const argv = process.argv.slice(2), arg = k => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : null; };
+if (arg("--opts")) Object.assign(OPTS, JSON.parse(arg("--opts")));
 
 globalThis.GORGE_GEOM = { square: true };
 const { W, H, HORIZON, rx, ry } = await import("../src/pix.js");
@@ -32,7 +50,7 @@ const interp = (x, xs, ys) => {
 
 // ---------------------------------------------------------------- Mt. Hood
 // town.py's north-face profile, scaled up: MH across and MV down per pixel of the old drawing.
-const PEAK_X = 75, SUMMIT_Y = 27, MH = 1.2, MV = 1.4;
+const PEAK_X = 75, SUMMIT_Y = OPTS.summitY, MH = 1.2, MV = 1.4;
 function slope(d, segments) {
   let y = 0;
   for (const [run, s] of segments) {
@@ -88,13 +106,41 @@ const xs = Array.from({ length: W }, (_, x) => x), old = x => x / rx(1); // a co
 
 // far ridges: Mosier to the east, the valley opening under Hood, Mt. Defiance to the west
 const n1 = valueNoise(W, 20, rng), n2 = valueNoise(W, 60, rng);
-const ridge = xs.map(x => ry(interp(old(x), [0, 40, 85, 110, 150, 190, 215, 235, 256], [24, 23, 24, 25, 26, 25, 20, 17, 16])) + 2.0 * n1[x] + 0.8 * n2[x]);
+const ridge = OPTS.eastHills
+  ? xs.map(x => ry(interp(old(x), [0, 30, 55, 80, 110, 150, 190, 215, 235, 256], [19.5, 20.5, 19.8, 22.5, 24.5, 26, 25, 20, 17, 16]))
+    + (old(x) < 120 ? 3.2 : 2.0) * n1[x] + 0.8 * n2[x] - OPTS.ridgeLift)
+  : xs.map(x => ry(interp(old(x), [0, 40, 85, 110, 150, 190, 215, 235, 256], [24, 23, 24, 25, 26, 25, 20, 17, 16])) + 2.0 * n1[x] + 0.8 * n2[x] - OPTS.ridgeLift);
 for (const x of xs) fill(x, ridge[x], old(x) < 150 ? FAR_EAST : FAR_WEST);
+if (OPTS.eastHills) { // oaks and draws on the dry eastern hills: darker clumps, thicker toward their feet
+  const er = new Rng(31), oaks = Array.from({ length: 5 }, () => valueNoise(W, 24, er));
+  for (const x of xs) for (let y = Math.round(ridge[x]) + 1; y < HORIZON; y++) {
+    if (land[y * W + x] !== FAR_EAST) continue;
+    const below = (y - ridge[x]) / 12, n = oaks[y % 5][(x * 3 + y * 7) % W];
+    if (n > 0.55 - 0.25 * Math.min(1, below)) set(x, y, FAR_WEST);
+  }
+}
 
 // orchard slopes of the Hood River Valley behind town, in rows
 const n3 = valueNoise(W, 15, rng);
-const orch = xs.map(x => ry(interp(old(x), [60, 92, 150, 205, 240], [31, 26, 23.5, 24.5, 30])) + 1.4 * n3[x]);
-for (let x = Math.round(rx(60)); x < Math.round(rx(240)); x++) {
+const orch = OPTS.slope
+  ? xs.map(x => ry(interp(old(x), [0, 60, 110, 160, 210, 256], [30.5, 30, 29, 27.5, 26, 25])) + 1.4 * n3[x] - OPTS.orchLift)
+  : xs.map(x => ry(interp(old(x), [60, 92, 150, 205, 240], [31, 26, 23.5, 24.5, 30])) + 1.4 * n3[x] - OPTS.orchLift);
+
+// forested foothills between the far ridges and the valley: two humps, either side of the gap under Hood
+if (OPTS.foothills > 0) {
+  const fr = new Rng(21), f1 = valueNoise(W, 12, fr), f2 = valueNoise(W, 40, fr);
+  const clumps = Array.from({ length: 6 }, () => valueNoise(W, 32, fr)); // darker stands of fir, in patches
+  for (const x of xs) {
+    const hump = Math.max(OPTS.footL * Math.exp(-(((x - 30) / 26) ** 2)), OPTS.footR * Math.exp(-(((x - 108) / 22) ** 2)));
+    const top = Math.max(orch[x] - 1, 0) - OPTS.foothills * (0.35 + 0.65 * hump) + 1.6 * f1[x] + 0.6 * f2[x];
+    if (top >= ridge[x] + 1) continue;
+    for (let y = Math.max(0, Math.round(top)); y < HORIZON; y++) {
+      const dark = clumps[y % 6][(x + y * 5) % W] + 0.5 * clumps[(y + 3) % 6][x] > 0.45;
+      set(x, y, y === Math.round(top) ? FAR_WEST : dark ? TREE : FAR_WEST);
+    }
+  }
+}
+for (let x = OPTS.slope ? 0 : Math.round(rx(60)); x < Math.round(rx(240)); x++) {
   for (let y = Math.round(orch[x]); y < HORIZON; y++) set(x, y, y % 2 === 0 && (x + y) % 3 === 0 ? ORCHARD_ROW : ORCHARD);
 }
 
@@ -103,7 +149,7 @@ const windows = [], buildings = [];
 const TOWN_X = rx(150), clip = (v, a, b) => Math.max(a, Math.min(b, v));
 for (let i = 0; i < 200; i++) {
   const x = Math.trunc(clip(rng.normal(TOWN_X, 17), rx(90), rx(226)));
-  const up = (Math.abs(rng.normal(0, 3.6)) + Math.abs(x - TOWN_X) / 18) * 1.05; // how far up the hill
+  const up = (Math.abs(rng.normal(0, 3.6)) + (OPTS.slope ? Math.max(0, x - TOWN_X) / 40 : Math.abs(x - TOWN_X) / 18)) * OPTS.townSpread; // how far up the hill
   const bottom = Math.trunc(clip(ROW_TOWN_BASE - up, orch[x] + 1, ROW_TOWN_BASE));
   const downtown = Math.abs(x - TOWN_X) < 14 && bottom >= ROW_TOWN_BASE - 2;
   const bw = rng.integers(2, downtown ? 5 : 4), bh = rng.integers(2, downtown ? 6 : 4);
@@ -175,7 +221,8 @@ const data = {
   summit: [PEAK_X, summitY], windows, stars,
   caps: b64(caps), glints: b64(glints), fog_tex: b64(fogTex),
   cars, bridge_cars: bridgeCars, masts,
+  sandbar: { ...OPTS.sandbar, x0: rx(OPTS.sandbar.x0), x1: rx(OPTS.sandbar.x1) },
 };
-const out = new URL("../assets/scene_square.json", import.meta.url);
+const out = arg("--out") || new URL("../assets/scene_square.json", import.meta.url);
 writeFileSync(out, JSON.stringify(data));
-console.log(`wrote assets/scene_square.json: summit ${data.summit}, ${windows.length} windows`);
+console.log(`wrote ${arg("--out") || "assets/scene_square.json"}: summit ${data.summit}, ${windows.length} windows`);
