@@ -12,8 +12,13 @@
 //   egg.trigger      an egg name (or names, one per line) to play now; "show" plays every egg once, then
 //                    returns to live; "live" stops a show and returns to the real time and weather
 //   weather.trigger  a weather preset, or "live"
+//   mode.trigger     "photos" plays the photo album instead of the scene, "live" goes back to the scene
+//                    (remembered in the file "mode", so it survives a restart)
+//   photos/*.rgb     the album: clips of raw WxH RGB frames at the board's frame rate, played in name order
+//                    (made by the private led-matrix repo's tools/photo_album.py; never part of the website)
 // Each trigger file is read and deleted within a second.
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { createSocket } from "node:dgram";
 import { deflateSync } from "node:zlib";
 import { homedir } from "node:os";
@@ -107,6 +112,39 @@ function readTrigger(name) {
   try { s = readFileSync(p, "utf8"); unlinkSync(p); } catch { return null; }
   return s.split(/\s+/).map(x => x.trim().toLowerCase()).filter(Boolean);
 }
+// ---- photo mode: the album's clips in turn, each loaded ahead while the one before plays
+let mode = "live";
+try { mode = readFileSync(join(args.dir, "mode"), "utf8").trim() === "photos" ? "photos" : "live"; } catch { /* live */ }
+const BLACK = new Uint8Array(W * H * 3);
+const album = { i: -1, clip: null, f: 0, loading: false, ready: null, gen: 0 };
+function albumLoad() { // read the next clip in the background; album.ready gets it (null if there is none)
+  let files = [];
+  try { files = readdirSync(join(args.dir, "photos")).filter(f => f.endsWith(".rgb")).sort(); } catch { /* none */ }
+  if (!files.length) { album.ready = { b: null }; return; }
+  album.i = (album.i + 1) % files.length;
+  album.loading = true;
+  const gen = album.gen;
+  readFile(join(args.dir, "photos", files[album.i])).then(b => b, () => null).then(b => {
+    if (gen !== album.gen) return; // the mode changed meanwhile
+    album.loading = false; album.ready = { b: b && b.length >= out.length ? b : null };
+  });
+}
+function photoFrame() { // a frame from the album, or null to show the scene
+  if (!album.clip || album.f + out.length > album.clip.length) {
+    if (!album.ready) {
+      if (!album.loading) albumLoad();
+      if (album.clip) return album.clip.subarray(album.clip.length - out.length); // hold the last frame
+      return album.loading ? BLACK : null;
+    }
+    album.clip = album.ready.b; album.ready = null; album.f = 0;
+    if (!album.clip) return null;
+    albumLoad(); // the next clip loads while this one plays
+  }
+  const fr = album.clip.subarray(album.f, album.f + out.length);
+  album.f += out.length;
+  return fr;
+}
+
 setInterval(() => {
   const eggs = readTrigger("egg.trigger");
   for (const e of eggs || []) {
@@ -120,6 +158,12 @@ setInterval(() => {
     else if (PRESETS[wx[0]]) ctl.setWeather(wx[0]);
     else log(`weather: unknown preset ${wx[0]}`);
     log(`weather: ${ctl.weather || "live"}`);
+  }
+  const md = readTrigger("mode.trigger");
+  if (md && (md[0] === "photos" || md[0] === "live")) {
+    mode = md[0]; Object.assign(album, { clip: null, loading: false, ready: null, gen: (album.gen || 0) + 1 });
+    try { writeFileSync(join(args.dir, "mode"), mode); } catch { /* still switches */ }
+    log(`mode: ${mode}`);
   }
   if (ctl.show && showOnce) { // a triggered show plays every egg once, then the board goes back to live
     if (ctl.show.i < lastShowI) { ctl.goLive(); showOnce = false; log("egg show: done, back to live"); }
@@ -147,7 +191,8 @@ let next = performance.now(), stats = { n: 0, ms: 0, worst: 0, late: 0 }, statT 
 log(`streaming ${W}x${H} at ${args.fps} fps to ${args.host}:${args.port}; triggers in ${args.dir}`);
 function tick() {
   const a = performance.now();
-  send(render(Date.now(), period / 1000));
+  const photo = mode === "photos" ? photoFrame() : null;
+  send(photo || render(Date.now(), period / 1000));
   const ms = performance.now() - a;
   stats.n++; stats.ms += ms; stats.worst = Math.max(stats.worst, ms);
   next += period;
