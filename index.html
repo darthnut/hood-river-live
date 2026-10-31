@@ -24,6 +24,10 @@
   .sub { color: var(--dim); margin: 0; }
   .panel { position: relative; background: #000; border-radius: 10px; padding: clamp(6px, 1.2vw, 14px); box-shadow: 0 0 0 1px var(--line); }
   .panel canvas { display: block; width: 100%; aspect-ratio: 8 / 3; image-rendering: pixelated; }
+  /* the square LED board's view (128x128): as big as fits, centred */
+  .panel.square canvas#px { width: min(100%, 78vh); aspect-ratio: 1; margin-inline: auto; }
+  .panel.square:fullscreen { display: flex; align-items: center; }
+  .panel.square:fullscreen canvas#px { width: min(100%, 100vh - 28px); }
   #dots { position: absolute; pointer-events: none; }
   .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   button { font: 500 13px var(--body); color: var(--text); background: #171b21; border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; cursor: pointer; }
@@ -66,6 +70,7 @@
   </div>
   <div class="bar">
     <button id="led" aria-pressed="false">LED look</button>
+    <button id="square" aria-pressed="false">Square</button>
     <button id="full">Full screen</button>
     <button id="ctl" aria-expanded="false" aria-controls="controls">Controls</button>
     <button id="mode" hidden></button>
@@ -106,8 +111,28 @@
   <footer>Looking south across the Columbia from the Washington shore: the Hood River Bridge, the town, and Mt. Hood. The sun, moon and weather follow what's really happening in Hood River, Oregon.</footer>
 </main>
 <script type="module">
-  import { start } from "./src/main.js";
+  // Square: the 128x128 LED board's layout. The scene's size is fixed when its modules load, so the choice is
+  // read first (?square=1 or 0 in the link wins, then the last choice made here) and changing it reloads.
+  const q = new URLSearchParams(location.search);
+  let square = false;
+  try { square = localStorage.getItem("square") === "1"; } catch (e) {}
+  if (q.has("square")) square = q.get("square") !== "0";
+  if (square) globalThis.GORGE_GEOM = { square: true };
+  const { start } = await import("./src/main.js");
+  const { mountPanel } = await import("./src/panel.js");
+  const { W, FULL_H } = await import("./src/pix.js");
   const px = document.getElementById("px"), dots = document.getElementById("dots");
+  px.width = W; px.height = FULL_H;
+  document.getElementById("panel").classList.toggle("square", square);
+  const sqBtn = document.getElementById("square");
+  sqBtn.setAttribute("aria-pressed", square);
+  sqBtn.onclick = () => {
+    try { localStorage.setItem("square", square ? "0" : "1"); } catch (e) {}
+    const u = new URL(location.href);
+    u.searchParams.delete("square");
+    if (!square) u.searchParams.set("square", "1"); // a shareable link to the square view
+    location.href = u.href;
+  };
   let led = false;
   try { led = localStorage.getItem("led") === "1"; } catch (e) {}
 
@@ -119,10 +144,10 @@
     g.clearRect(0, 0, dots.width, dots.height);
     document.getElementById("led").setAttribute("aria-pressed", led);
     if (!led) return;
-    const s = dots.width / 256;
+    const s = dots.width / W;
     g.fillStyle = "#000"; g.fillRect(0, 0, dots.width, dots.height);
     g.globalCompositeOperation = "destination-out";
-    for (let y = 0; y < 96; y++) for (let x = 0; x < 256; x++) { g.beginPath(); g.arc((x + .5) * s, (y + .5) * s, s * .36, 0, 6.2832); g.fill(); }
+    for (let y = 0; y < FULL_H; y++) for (let x = 0; x < W; x++) { g.beginPath(); g.arc((x + .5) * s, (y + .5) * s, s * .36, 0, 6.2832); g.fill(); }
     g.globalCompositeOperation = "source-over";
   }
   addEventListener("resize", drawDots);
@@ -130,7 +155,6 @@
   document.getElementById("full").onclick = () => document.getElementById("panel").requestFullscreen?.().catch(() => {});
   document.addEventListener("fullscreenchange", () => setTimeout(drawDots, 50));
   drawDots();
-  import { mountPanel } from "./src/panel.js";
   let onLog = () => {};
   const ctlBtn = document.getElementById("ctl"), controls = document.getElementById("controls");
   ctlBtn.onclick = () => { controls.hidden = !controls.hidden; ctlBtn.setAttribute("aria-expanded", !controls.hidden); ctlBtn.setAttribute("aria-pressed", !controls.hidden); document.body.classList.toggle("ctl-open", !controls.hidden); };

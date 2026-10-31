@@ -1,6 +1,6 @@
 // Boot the scene and run it at 20 fps in the page.
-// URL parameters, for testing: ?at=HH:MM  ?date=YYYY-MM-DD  ?speed=60  ?weather=rain  ?wind=25  ?egg=NAME
-import { W, FULL_H } from "./pix.js";
+// URL parameters, for testing: ?square=1 (the 128x128 board, set before the modules load; see index.html)  ?at=HH:MM  ?date=YYYY-MM-DD  ?speed=60  ?weather=rain  ?wind=25  ?egg=NAME
+import { W, FULL_H, SQUARE } from "./pix.js";
 import { Scene } from "./scene.js";
 import { LiveWind, PRESETS } from "./weather.js";
 import { hoodRiverTime, localParts } from "./sky.js";
@@ -95,7 +95,7 @@ export class Controller {
 }
 
 export async function start(canvas, { onStatus = () => {}, onLog = () => {} } = {}) {
-  const data = await (await fetch(new URL("../assets/scene.json", import.meta.url))).json();
+  const data = await (await fetch(new URL(SQUARE ? "../assets/scene_square.json" : "../assets/scene.json", import.meta.url))).json();
   loadSky(new URL("../assets/sky.json", import.meta.url));
   const q = new URLSearchParams(location.search);
   const log = m => { console.log(m); onLog(m); };

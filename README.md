@@ -13,6 +13,9 @@ board's coordinates on a view of the bottom 64 rows (so everything calibrated on
 and the drawing helpers in `src/pix.js` let negative rows reach up into the extra sky. The sky, weather,
 sun and moon arcs, and the sky eggs use the whole height; the captions sit at the new top edge.
 
+The **Square** button shows the same scene as it runs on the square LED board (four 64×64 panels as 2×2,
+128×128): a taller sky, a bigger Mt. Hood and the same eggs. Add `?square=1` to a link to open it that way.
+
 ## Run it locally
 
 Any static file server works (ES modules don't load from `file://`):
