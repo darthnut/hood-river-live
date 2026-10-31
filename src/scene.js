@@ -532,10 +532,7 @@ export class Scene {
         if (ii % 2) this.member(img, za, 0, zn, -dt, sc3(steel, 0.9));
         else this.member(img, za, -dt, zn, 0, sc3(steel, 0.9));
         this.member(img, za, 0, za, -dt, sc3(steel, 0.8));
-        if (SQUARE) { // the roadway and the truss's shadowed underside, so the deck reads against the hills
-          this.member(img, za, -dt, zn, -dt, sc3(steel, 0.42));
-          this.member(img, za, 0, zn, 0, this.slab);
-        }
+        if (SQUARE) this.roadway(img, za, zn, 0, -dt, steel);
       }]);
       z = zn; i++;
     }
@@ -560,6 +557,13 @@ export class Scene {
       const [x, y] = this.project(z, th + 5 * vk);
       blend(img, x, y, [1, 0.15, 0.1], night);
     }
+  }
+
+  // The square board's roadway: a single bright line (doubling it up close would cover it in the darker
+  // second pixel), with the shadowed chord under it, so the deck reads against the hills behind.
+  roadway(img, za, zb, up, under, steel) {
+    this.member(img, za, under, zb, under, sc3(steel, 0.42), 0, 0, false);
+    this.member(img, za, up, zb, up, this.slab, 0, 0, false);
   }
 
   depthAtRow(y) {
@@ -595,13 +599,15 @@ export class Scene {
     for (let i = 0; i < n; i++) {
       const [za, ua] = tops[i], [zb, ub] = tops[i + 1];
       add((za + zb) / 2, img => {
-        this.member(img, za, raise, zb, raise, SQUARE ? this.slab : steel);
+        if (!SQUARE) this.member(img, za, raise, zb, raise, steel);
         this.member(img, za, ua, zb, ub, steel);
         this.member(img, za, raise, za, ua, sc3(steel, 0.85), 0, 0, !SQUARE);
         if (i < n / 2) this.member(img, za, raise, zb, ub, sc3(steel, 0.8), 0, 0, !SQUARE); // thin diagonals on the square
         else this.member(img, za, ua, zb, raise, sc3(steel, 0.8), 0, 0, !SQUARE);
       });
     }
+    // the lift span's roadway, drawn over all of its truss so nothing breaks it; it rises with the span
+    if (SQUARE) add(zA + 0.001, img => this.roadway(img, zA, zB, raise, raise - Scene.DECK_TRUSS * 0.35, steel));
     add((zA + zB) / 2 - 0.01, img => { // cables draped between the tower tops
       for (const [sag, alpha] of [[5.0 * vk, 0.55], [8.5 * vk, 0.4]]) {
         const pts = Array.from({ length: 12 }, (_, j) => {
