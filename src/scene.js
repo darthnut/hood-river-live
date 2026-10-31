@@ -77,10 +77,11 @@ export class Scene {
   static VK = 1; // heights of the bridge's details, in near-plane pixels per board pixel
 
   // The square board: the same bridge from the same spot, at half the width and half again as tall, so the
-  // lift towers rise past the far ridges toward Mt. Hood.
+  // lift towers rise past the far ridges toward Mt. Hood. Its vanishing point sits higher than the board's
+  // (row 75.5, not ry(33.3) = 81.3), or the far spans flatten onto the freeway and vanish into the hillside.
   static squareGeometry() {
     Object.assign(Scene, {
-      VP: [rx(100), ry(33.3)], NEAR_DECK: [rx(100) - 57, ry(33.3) - 9.5], VK: 1.5,
+      VP: [rx(100), 75.5], NEAR_DECK: [rx(100) - 57, ry(33.3) - 9.5], VK: 1.5,
       TOWER_H: 38, TOWER_W: 5, DECK_TRUSS: 8, WATER: 63,
       PEAK_X: 75, RAIL_ROW: HORIZON - 4, RAIL_SPAN: [0, Math.round(rx(232))], PERCH: [Math.round(rx(160)), HORIZON],
     });
@@ -489,10 +490,10 @@ export class Scene {
     return [vx + (Scene.NEAR_DECK[0] + dx - vx) * k, vy + (Scene.NEAR_DECK[1] - up - vy) * k, k];
   }
 
-  member(img, z0, up0, z1, up1, col, dx0 = 0, dx1 = 0) {
+  member(img, z0, up0, z1, up1, col, dx0 = 0, dx1 = 0, thick = true) {
     const [x0, y0, k0] = this.project(z0, up0, dx0), [x1, y1, k1] = this.project(z1, up1, dx1);
     line(img, x0, y0, x1, y1, col, 1);
-    if ((k0 + k1) / 2 > 0.45) line(img, x0 + 1, y0, x1 + 1, y1, sc3(col, 0.78), 1); // up close, thicker steel
+    if (thick && (k0 + k1) / 2 > 0.45) line(img, x0 + 1, y0, x1 + 1, y1, sc3(col, 0.78), 1); // up close, thicker steel
   }
 
   pier(img, z, width, concrete, twin, stepped = false) {
@@ -507,6 +508,17 @@ export class Scene {
       line(img, xx, yTop, xx, yBot, col, 1);
     }
     if (stepped) for (let xx = Math.round(x - half - 1); xx <= Math.round(x + half + 1); xx++) blend(img, xx, yTop, sc3(concrete, 0.9), 1);
+    if (!SQUARE) return;
+    // the square board sees the piers against the hills: a cap under the truss, and a broken reflection below
+    // the waterline so they stand in the river rather than stopping on it
+    for (let xx = Math.round(x - half - (half >= 1.5 ? 1 : 0)); xx <= Math.round(x + half + (half >= 1.5 ? 1 : 0)); xx++) {
+      blend(img, xx, yTop, sc3(concrete, 1.08), 1);
+    }
+    const reflect = Math.min(10, Math.round((yBot - yTop) * 0.22));
+    for (let i = 1; i <= reflect && yBot + i < H; i++) {
+      const wob = (i % 3) - 1;
+      for (let xx = Math.round(x - half); xx <= Math.round(x + half); xx++) blend(img, xx + wob, yBot + i, sc3(concrete, 0.8), 0.32 * (1 - i / (reflect + 1)));
+    }
   }
 
   deckTrussItems(z0, z1, steel, panel = 0.28) {
@@ -520,6 +532,10 @@ export class Scene {
         if (ii % 2) this.member(img, za, 0, zn, -dt, sc3(steel, 0.9));
         else this.member(img, za, -dt, zn, 0, sc3(steel, 0.9));
         this.member(img, za, 0, za, -dt, sc3(steel, 0.8));
+        if (SQUARE) { // the roadway and the truss's shadowed underside, so the deck reads against the hills
+          this.member(img, za, -dt, zn, -dt, sc3(steel, 0.42));
+          this.member(img, za, 0, zn, 0, this.slab);
+        }
       }]);
       z = zn; i++;
     }
@@ -533,8 +549,8 @@ export class Scene {
     const vk = Scene.VK;
     while (up < th - 3 * vk) { // X-bracing up the tower
       const u1 = Math.min(th - 3 * vk, up + tw * 1.1 * vk);
-      this.member(img, z, up, z, u1, sc3(steel, 0.85), -tw / 2, tw / 2);
-      this.member(img, z, u1, z, up, sc3(steel, 0.85), -tw / 2, tw / 2);
+      this.member(img, z, up, z, u1, sc3(steel, 0.85), -tw / 2, tw / 2, !SQUARE);
+      this.member(img, z, u1, z, up, sc3(steel, 0.85), -tw / 2, tw / 2, !SQUARE);
       this.member(img, z, u1, z, u1, steel, -tw / 2, tw / 2);
       up = u1;
     }
@@ -552,7 +568,9 @@ export class Scene {
 
   // The bridge as [depth, draw] pieces, so riders can be sorted in among its piers and spans.
   foregroundItems(t, w, night, dim) {
-    const steel = shade([104, 128, 92], w), house = shade([150, 162, 132], w);
+    // the square board's bridge stands in front of tan and green hills, so its steel is a darker, cooler grey-green
+    const steel = shade(SQUARE ? [78, 100, 96] : [104, 128, 92], w), house = shade(SQUARE ? [176, 182, 166] : [150, 162, 132], w);
+    this.slab = shade([214, 210, 196], w);
     const concrete = shade([200, 180, 140], w), cable = shade([200, 205, 200], w);
     const [zA, zB] = Scene.LIFT;
     const items = [];
@@ -577,11 +595,11 @@ export class Scene {
     for (let i = 0; i < n; i++) {
       const [za, ua] = tops[i], [zb, ub] = tops[i + 1];
       add((za + zb) / 2, img => {
-        this.member(img, za, raise, zb, raise, steel);
+        this.member(img, za, raise, zb, raise, SQUARE ? this.slab : steel);
         this.member(img, za, ua, zb, ub, steel);
-        this.member(img, za, raise, za, ua, sc3(steel, 0.85));
-        if (i < n / 2) this.member(img, za, raise, zb, ub, sc3(steel, 0.8));
-        else this.member(img, za, ua, zb, raise, sc3(steel, 0.8));
+        this.member(img, za, raise, za, ua, sc3(steel, 0.85), 0, 0, !SQUARE);
+        if (i < n / 2) this.member(img, za, raise, zb, ub, sc3(steel, 0.8), 0, 0, !SQUARE); // thin diagonals on the square
+        else this.member(img, za, ua, zb, raise, sc3(steel, 0.8), 0, 0, !SQUARE);
       });
     }
     add((zA + zB) / 2 - 0.01, img => { // cables draped between the tower tops
