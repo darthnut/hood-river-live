@@ -1,6 +1,6 @@
 // Easter eggs, batch 4 (the board's eggs_more3.py): Gorge weather and seasons, the real night sky, and
 // some silliness.
-import { W, H, HORIZON, TOP, rgb, blend, line, text, get, put, getFull, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, SQUARE, KS, KW, rx, ry, unry, wdepth, rgb, blend, line, text, get, put, getFull, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash, disk, glow, landTop, skyXY } from "./eggs.js";
 import { MAT, Scene } from "./scene.js";
 import { Rainbow, Sasquatch, Sternwheeler } from "./eggs1.js";
@@ -102,7 +102,7 @@ export class CountyFair extends Egg {
   static LIGHTS = [[255, 70, 70], [255, 210, 60], [80, 220, 255], [255, 120, 220], [120, 255, 120]];
   layer = "shore"; duration = 900; perHour = 300; exclusive = false;
   allowed(c) { return c.now.month === 7 && c.now.day >= 22 ? Math.max(c.night, c.w.twi) : 0; }
-  begin(c) { this.cx = 214; this.ground = landTop(c.scene, 214, [MAT.ORCHARD, MAT.ORCHARD_ROW]) ?? HORIZON - 8; return true; }
+  begin(c) { this.cx = Math.round(rx(214)); this.ground = landTop(c.scene, this.cx, [MAT.ORCHARD, MAT.ORCHARD_ROW]) ?? HORIZON - 8; return true; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 4), r = 6, cx = this.cx, cy = this.ground - r - 1;
     const dark = mul(rgb(40, 40, 55), 0.4 + 0.6 * c.light);
@@ -125,16 +125,16 @@ export class Race extends Egg {
   static COLORS = [[255, 60, 60], [255, 200, 40], [60, 200, 255], [255, 110, 200], [120, 240, 90], [255, 140, 30], [200, 120, 255], [250, 250, 250]];
   layer = "water"; duration = 40; perHour = 0.2;
   allowed(c) { return c.now.hour >= 12 && c.now.hour <= 17 ? c.light : 0; }
-  begin(c) { this.marks = [[70, 49], [190, 55]]; this.lag = Race.COLORS.map(() => c.rng.uniform(0, 2.6)).sort((a, b) => a - b); return true; }
-  depthRow() { return 52; }
+  begin(c) { this.marks = [[rx(70), ry(49)], [rx(190), ry(55)]]; this.lag = Race.COLORS.map(() => c.rng.uniform(0, 2.6)).sort((a, b) => a - b); return true; }
+  depthRow() { return ry(52); }
   course(u) { // a loop around the two marks; u in 0..1 per lap
     const [[x0, y0], [x1, y1]] = this.marks, a = 2 * Math.PI * u;
-    return [(x0 + x1) / 2 - Math.cos(a) * (x1 - x0) / 2 * 1.08, (y0 + y1) / 2 + Math.sin(a) * 4.5];
+    return [(x0 + x1) / 2 - Math.cos(a) * (x1 - x0) / 2 * 1.08, (y0 + y1) / 2 + Math.sin(a) * 4.5 * KW];
   }
   draw(img, c, age) {
     const lum = 0.55 + 0.45 * c.light;
     for (const [mx, my] of this.marks) { blend(img, mx, my, mul(rgb(255, 120, 20), lum), 1); blend(img, mx, my - 1, mul(rgb(255, 150, 40), lum), 1); }
-    const bx = 128, by = 58; // committee boat
+    const bx = Math.round(rx(128)), by = Math.round(ry(58)); // committee boat
     for (let i = -3; i <= 3; i++) blend(img, bx + i, by, mul(rgb(235, 235, 235), lum), 1);
     blend(img, bx, by - 1, mul(rgb(235, 235, 235), lum), 1);
     line(img, bx + 2, by - 1, bx + 2, by - 5, mul(rgb(60, 60, 60), lum), 1);
@@ -143,7 +143,7 @@ export class Race extends Egg {
     Race.COLORS.forEach((col, k) => {
       const lag = this.lag[k], u = age < 1.5 + lag ? 0 : (age - 1.5 - lag) / 16;
       const [x, y] = this.course(u), d = this.course(u + 0.01)[0] - x >= 0 ? 1 : -1;
-      const sc = 0.8 + (y - 45) / 20 * 0.6, hs = Math.round(5 * sc) + 2;
+      const sc = 0.8 + (y - ry(45)) / (ry(65) - ry(45)) * 0.6, hs = Math.round(5 * sc) + 2;
       for (let i = 0; i < hs; i++) {
         const wdt = Math.max(1, Math.round((1 - i / hs) * (2.4 * sc + 1)));
         for (let j = 0; j < wdt; j++) blend(img, x + d - d * j, y - 1 - i, mul(rgb(...col), lum), 1);
@@ -162,7 +162,7 @@ export class IceFloes extends Egg {
   begin(c) {
     const r = c.rng;
     this.floes = Array.from({ length: 18 }, () => {
-      const y = r.uniform(40, 62), sc = 0.9 + (y - 40) / 22 * 1.6, shape = [];
+      const y = r.uniform(ry(40), ry(62)), sc = 0.9 + wdepth(y) * 21 / 22 * 1.6, shape = [];
       for (let dx = -Math.trunc(4 * sc); dx <= Math.trunc(4 * sc); dx++) for (let dy = 0; dy < Math.trunc(1 + sc); dy++) if (r.random() < 0.85 - 0.1 * dy) shape.push([dx, dy]);
       return [r.uniform(-60, W - 40), y, r.uniform(3, 5), shape];
     });
@@ -190,7 +190,7 @@ export class DamRainbow extends Egg {
   layer = "shore"; duration = 60; perHour = 0.3;
   allowed(c) { return [4, 5, 6].includes(c.now.month) && c.now.hour < 13 ? c.light : 0; } // sun behind you in the morning
   draw(img, c, age) {
-    const fade = smoothFade(age, this.duration, 8), cx = 246, cy = HORIZON + 1;
+    const fade = smoothFade(age, this.duration, 8), cx = Math.round(rx(246)), cy = HORIZON + 1;
     for (let k = 0; k < 40; k++) { // billowing mist
       const a = k * 2.4 + age * 0.3;
       blend(img, cx - 6 + (k % 7) * 2.5 + Math.sin(a) * 2, cy - 2 - ((k * 1.7 + age * 1.5) % 14), rgb(235, 238, 245), 0.18 * fade);
@@ -206,7 +206,7 @@ export class Paddleboard extends Egg {
   static egg = "paddleboard";
   layer = "water"; duration = 26; perHour = 1;
   allowed(c) { return c.wind && c.wind.speed >= 28 ? c.light : 0; }
-  begin(c) { this.row = c.rng.uniform(50, 57); return true; }
+  begin(c) { this.row = c.rng.uniform(ry(50), ry(57)); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const x = -8 + age * (W + 16) / this.duration, y = this.row + Math.sin(age * 3) * 0.6, lum = 0.6 + 0.4 * c.light;
@@ -225,7 +225,7 @@ export class Beaver extends Egg {
   static egg = "beaver";
   layer = "water"; duration = 26; perHour = 0.25;
   allowed(c) { return c.light + c.w.twi; }
-  begin(c) { this.x0 = c.rng.uniform(40, 90); this.y0 = c.rng.uniform(52, 58); this.x1 = 150; this.y1 = HORIZON + 2.5; return true; }
+  begin(c) { this.x0 = c.rng.uniform(rx(40), rx(90)); this.y0 = c.rng.uniform(ry(52), ry(58)); this.x1 = rx(150); this.y1 = HORIZON + 2.5 * KW; return true; }
   pos(age) { const p = Math.min(1, age / 20); return [this.x0 + (this.x1 - this.x0) * p, this.y0 + (this.y1 - this.y0) * p]; }
   depthRow(c, age) { return this.pos(age)[1]; }
   draw(img, c, age) {
@@ -253,7 +253,7 @@ export class SnowDay extends Egg {
   allowed(c) { return c.ground > 0.3 ? c.light : 0; }
   begin(c) {
     this.path = [];
-    for (let x = 186; x < 230; x++) { const y = landTop(c.scene, x); if (y !== null) this.path.push([x, y]); }
+    for (let x = Math.round(rx(186)); x < Math.round(rx(230)); x++) { const y = landTop(c.scene, x); if (y !== null) this.path.push([x, y]); }
     if (this.path.length < 10) return false;
     this.kids = Array.from({ length: 5 }, () => [c.rng.uniform(0, 1), c.rng.uniform(0.8, 1.2)]);
     return true;
@@ -308,7 +308,7 @@ export class MeteorShower extends Egg {
     this.meteors = Array.from({ length: this.burst ? 42 : 1 }, () => {
       let x, y;
       for (let tries = 0; tries < 20; tries++) { // start in open sky: the mountain hides meteors behind it
-        x = r.uniform(4, W - 4); y = r.uniform(10 - TOP, 26);
+        x = r.uniform(4, W - 4); y = r.uniform(ry(10 - TOP), ry(26));
         if (y < 0) break; // the website's extra sky is all open
         const ground = landTop(c.scene, x);
         if (mtn[Math.trunc(y) * W + Math.trunc(x)] === 0 && !(ground !== null && ground <= y)) break;
@@ -329,7 +329,7 @@ export class MeteorShower extends Egg {
 
 // Screen position on the same arc mapping the scene uses for the sun and moon.
 function planetXY(p) {
-  if (p.length > 4) { const [x, y] = Scene.arc(p[4], p[2]); return [x, Math.max(10, y)]; }
+  if (p.length > 4) { const [x, y] = Scene.arc(p[4], p[2]); return [x, Math.max(SQUARE ? 24 : 10, y)]; }
   return skyXY(p[1], p[2]);
 }
 
@@ -365,7 +365,7 @@ export class StarlinkTrain extends Egg {
       const p = age / this.duration;
       for (let k = 0; k < 24; k++) { // a tight line of pearls, the leaders a little ahead
         const u = p * 1.25 - k * 0.018;
-        if (u >= 0 && u <= 1) pts.push([W * 0.95 - u * W * 0.9, 12 + u * 10 + Math.sin(k) * 0.3]);
+        if (u >= 0 && u <= 1) pts.push([W * 0.95 - u * W * 0.9, ry(12 + u * 10) + Math.sin(k) * 0.3]);
       }
     } else {
       const vis = starlinkVisible(c.nowMs);
@@ -458,12 +458,13 @@ export class NoctilucentClouds extends Egg {
   }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 20), evening = c.now.hour >= 12;
-    const [x0, x1] = evening ? [196, W] : [0, 60], col = [0.5, 0.85, 1.0];
-    for (let y = 9; y < 21; y++) for (let x = x0; x < x1; x++) {
+    const [x0, x1] = evening ? [Math.round(rx(196)), W] : [0, Math.round(rx(60))], col = [0.5, 0.85, 1.0];
+    for (let yy = Math.round(ry(9)); yy < Math.round(ry(21)); yy++) for (let x = x0; x < x1; x++) {
+      const y = unry(yy); // the 256x64 board's row
       const edge = evening ? (x - x0) / (x1 - x0) : (x1 - x) / (x1 - x0);
       const ripple = 0.5 + 0.5 * Math.sin(x * 0.9 + y * 2.6 + age * 0.15) * Math.sin(x * 0.21 - y * 0.7 + 1.3);
       const band = Math.exp(-(((y - 14 + 2 * Math.sin(x * 0.05)) / 3.5) ** 2));
-      const a = Math.min(1, Math.max(0, edge * 1.6)) * (0.35 + 0.65 * ripple) * band * 0.85 * fade, i = (y * W + x) * 3;
+      const a = Math.min(1, Math.max(0, edge * 1.6)) * (0.35 + 0.65 * ripple) * band * 0.85 * fade, i = (yy * W + x) * 3;
       for (let k = 0; k < 3; k++) img[i + k] = img[i + k] * (1 - a) + col[k] * a;
     }
   }
@@ -475,7 +476,7 @@ export class Bigfoot extends Egg {
   static egg = "bigfoot";
   layer = "water"; duration = 14; perHour = 0.06;
   allowed(c) { return c.light + 0.5 * c.w.twi; }
-  begin(c) { this.dir = c.rng.choice([-1, 1]); this.row = c.rng.uniform(52, 58); return true; }
+  begin(c) { this.dir = c.rng.choice([-1, 1]); this.row = c.rng.uniform(ry(52), ry(58)); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const d = this.dir, x = d > 0 ? -12 + age * (W + 24) / this.duration : W + 12 - age * (W + 24) / this.duration;
@@ -493,10 +494,10 @@ export class Bigfoot extends Egg {
 
 export class BigCat extends Egg {
   static egg = "bigcat";
-  static CX = 230;
+  static CX = Math.round(rx(230));
   layer = "mountain"; duration = 18; perHour = 0.05;
   allowed(c) { return c.light; }
-  begin(c) { this.ridge = landTop(c.scene, BigCat.CX) ?? 20; this.swatted = false; return true; }
+  begin(c) { this.ridge = landTop(c.scene, BigCat.CX) ?? ry(20); this.swatted = false; return true; }
   draw(img, c, age) {
     const rise = age < 14 ? Math.min(1, age / 3) : Math.max(0, 1 - (age - 14) / 3);
     const cx = BigCat.CX, cy = this.ridge + 8 - 10 * rise, lum = 0.55 + 0.45 * c.light; // eyes clear the ridge
@@ -520,7 +521,7 @@ export class BigCat extends Egg {
     for (const side of [-1, 1]) line(img, cx + side * 2, cy + 1, cx + side * 8, cy, mul(rgb(250, 250, 250), lum), 0.5); // whiskers
     if (age > 7 && age < 12) { // the swat: a paw arcs up and over to the left
       const p = (age - 7) / 5, a = Math.PI * (0.1 + 0.9 * p);
-      const px = cx - 7 - Math.sin(a) * 22, py = Math.max(11, cy - Math.sin(a) * 9 - p * 2);
+      const px = cx - 7 - Math.sin(a) * 22, py = Math.max(SQUARE ? 24 : 11, cy - Math.sin(a) * 9 - p * 2);
       disk(img, px, py, 2.6, fur, 1);
       for (const k of [-1, 0, 1]) blend(img, px + k * 1.3, py - 2.4, pink, 1); // toe beans
       if (p > 0.5 && !this.swatted) {
@@ -543,10 +544,10 @@ export class Pirates extends Egg {
     this.duration = (W + 50 + 55) / Sternwheeler.SPEED;
     return true;
   }
-  depthRow() { return 48.5; }
+  depthRow() { return Math.round(ry(47)) + 1.5; }
   draw(img, c, age) {
     this.sw.draw(img, c, age);
-    const swX = W + 10 - age * Sternwheeler.SPEED, x = swX + 50, y = 47, lum = 0.5 + 0.5 * c.light; // fifty pixels astern
+    const swX = W + 10 - age * Sternwheeler.SPEED, x = swX + 50, y = Math.round(ry(47)), lum = 0.5 + 0.5 * c.light; // fifty pixels astern
     const hull = mul(rgb(35, 28, 26), lum), sail = mul(rgb(30, 30, 34), lum), white = mul(rgb(235, 235, 230), lum);
     for (let i = 0; i < 24; i++) { blend(img, x + i, y, hull, 1); blend(img, x + i, y - 1, i > 2 && i < 22 ? hull : mul(rgb(120, 30, 30), lum), 1); }
     line(img, x, y - 1, x - 5, y - 4, hull, 1); // bowsprit
@@ -616,7 +617,7 @@ export class Balloons extends Egg {
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 6), lum = 0.5 + 0.5 * c.light;
     for (const [x0, t0, size, climb, pair, ph] of this.balloons) {
-      const x = x0 + age * 1.5 * size, y = HORIZON - 4 - Math.min(age + t0, 60) * climb * size * 0.9;
+      const x = x0 + age * 1.5 * size, y = HORIZON - 4 - Math.min(age + t0, 60) * climb * size * 0.9 * KS;
       const ra = mul(rgb(...Balloons.PAIRS[pair][0]), lum), rb = mul(rgb(...Balloons.PAIRS[pair][1]), lum), r = 2.2 * size;
       for (let yy = -Math.trunc(r) - 1; yy <= Math.trunc(r * 1.3); yy++) {
         const half = yy <= 0 ? Math.sqrt(Math.max(0, r * r - yy * yy)) : r * (1 - yy / (r * 1.4));

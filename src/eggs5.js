@@ -1,6 +1,6 @@
 // Easter eggs, batch 5 (the board's eggs_more4.py): more Gorge life, rarer sky sights, lesser holidays,
 // and nonsense.
-import { W, H, HORIZON, TOP, rgb, blend, lighten, line, text, FONT, getFull, getView, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, SQUARE, SX, KS, rx, ry, rgb, blend, lighten, line, text, FONT, getFull, getView, scale as mul } from "./pix.js";
 import { Egg, smoothFade, splash, disk, glow } from "./eggs.js";
 import { Scene } from "./scene.js";
 import { Fireworks } from "./eggs2.js";
@@ -58,12 +58,12 @@ export class Pelicans extends Egg {
   static egg = "pelicans";
   layer = "mountain"; duration = 40; perHour = 0.3;
   allowed(c) { return c.now.month >= 5 && c.now.month <= 9 ? c.light : 0; }
-  begin(c) { const r = c.rng; this.cx = r.uniform(60, 200); this.birds = Array.from({ length: 11 }, () => [r.uniform(0, 6.3), r.uniform(6, 13), r.uniform(-2, 2)]); return true; }
+  begin(c) { const r = c.rng; this.cx = r.uniform(rx(60), rx(200)); this.birds = Array.from({ length: 11 }, () => [r.uniform(0, 6.3), r.uniform(6, 13), r.uniform(-2, 2)]); return true; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 4), cx = this.cx + age * 1.2; // the thermal drifts downwind
     const body = rgb(250, 250, 245), tip = rgb(20, 20, 24);
     for (const [ph, rad, dy] of this.birds) {
-      const a = ph + age * 0.45, x = cx + Math.cos(a) * rad * 1.8, y = 14 + dy + Math.sin(a) * rad * 0.35 - age * 0.08;
+      const a = ph + age * 0.45, x = cx + Math.cos(a) * rad * 1.8, y = ry(14) + dy + Math.sin(a) * rad * 0.35 - age * 0.08;
       const banking = Math.sin(a) > 0.3; // the black flight feathers show as they bank away
       blend(img, x, y, body, fade); blend(img, x - 1, y, body, fade); blend(img, x + 1, y, body, fade);
       blend(img, x - 2, y - (banking ? 1 : 0), banking ? tip : body, fade); blend(img, x + 2, y - (banking ? 1 : 0), tip, fade);
@@ -76,13 +76,13 @@ export class Floatplane extends Egg {
   static egg = "floatplane";
   layer = "water"; duration = 30; perHour = 0.1;
   allowed(c) { return c.light; }
-  begin(c) { this.row = c.rng.uniform(50, 55); return true; }
+  begin(c) { this.row = c.rng.uniform(ry(50), ry(55)); return true; }
   depthRow() { return this.row; }
   path(age) {
-    if (age < 8) { const p = age / 8; return [-20 + p * 110, 14 + (this.row - 2 - 14) * (1 - (1 - p) ** 2), p > 0.93]; } // approach
-    if (age < 20) { const p = (age - 8) / 12; return [90 + 70 * (1 - (1 - p) ** 1.6), this.row - 2, true]; } // landing, taxiing
+    if (age < 8) { const p = age / 8; return [-20 + p * 110 * SX, ry(14) + (this.row - 2 - ry(14)) * (1 - (1 - p) ** 2), p > 0.93]; } // approach
+    if (age < 20) { const p = (age - 8) / 12; return [rx(90 + 70 * (1 - (1 - p) ** 1.6)), this.row - 2, true]; } // landing, taxiing
     const p = (age - 20) / 10; // take-off run and climb out to the right
-    return [160 + p * 130 * p + p * 20, this.row - 2 - Math.max(0, p - 0.25) ** 1.5 * 40, p < 0.3];
+    return [rx(160 + p * 130 * p + p * 20), this.row - 2 - Math.max(0, p - 0.25) ** 1.5 * 40 * KS, p < 0.3];
   }
   draw(img, c, age) {
     const [x, y, onWater] = this.path(age), lum = 0.6 + 0.4 * c.light;
@@ -104,7 +104,7 @@ export class DriftBoat extends Egg {
   static egg = "driftboat";
   layer = "water"; duration = 24; perHour = 0.15;
   allowed(c) { return c.light + 0.4 * c.w.twi; }
-  begin(c) { this.x0 = c.rng.uniform(150, 200); this.row = c.rng.uniform(54, 58); return true; }
+  begin(c) { this.x0 = c.rng.uniform(rx(150), rx(200)); this.row = c.rng.uniform(ry(54), ry(58)); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const x = this.x0 - Math.max(0, age - 6) ** 1.6 * 2.2, y = this.row + Math.sin(age * 2) * 0.4; // towed upriver, faster and faster
@@ -160,9 +160,9 @@ export class LogRaft extends Egg {
   static egg = "lograft";
   layer = "water"; duration = 70; perHour = 0.1;
   allowed(c) { return c.light + 0.5 * c.w.twi; }
-  depthRow() { return 43.5; }
+  depthRow() { return Math.round(ry(43)) + 0.5; }
   draw(img, c, age) {
-    const x = -60 + age * (W + 70) / this.duration, y = 43, lum = 0.5 + 0.5 * c.light;
+    const x = -60 + age * (W + 70) / this.duration, y = Math.round(ry(43)), lum = 0.5 + 0.5 * c.light;
     for (let i = 0; i < 44; i++) { // the raft, logs lashed in bundles
       const col = mul(Math.floor(i / 4) % 2 ? rgb(125, 85, 50) : rgb(150, 105, 62), lum);
       blend(img, x + i, y, col, 1); blend(img, x + i, y - 1, mul(col, 0.85), 1);
@@ -180,7 +180,7 @@ export class SupDog extends Egg {
   static egg = "supdog";
   layer = "water"; duration = 32; perHour = 0.25;
   allowed(c) { return !c.wind || c.wind.speed < 20 ? c.light : 0.3 * c.light; }
-  begin(c) { this.dir = c.rng.choice([-1, 1]); this.row = c.rng.uniform(55, 60); return true; }
+  begin(c) { this.dir = c.rng.choice([-1, 1]); this.row = c.rng.uniform(ry(55), ry(60)); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const d = this.dir, x = d > 0 ? -10 + age * (W + 20) / this.duration : W + 10 - age * (W + 20) / this.duration, y = this.row;
@@ -200,9 +200,9 @@ export class DuckFamily extends Egg {
   static egg = "ducklings";
   layer = "water"; duration = 28; perHour = 0.2;
   allowed(c) { return c.now.month >= 4 && c.now.month <= 7 ? c.light : 0.3 * c.light; }
-  depthRow() { return 57; }
+  depthRow() { return ry(57); }
   draw(img, c, age) {
-    const lum = 0.6 + 0.4 * c.light, x0 = W - 20 - age * 5.5, y = 57;
+    const lum = 0.6 + 0.4 * c.light, x0 = W - 20 - age * 5.5, y = Math.round(ry(57));
     const brown = mul(rgb(120, 85, 50), lum), green = mul(rgb(40, 110, 60), lum), fuzz = mul(rgb(235, 205, 90), lum);
     for (const dx of [0, 1, 2]) blend(img, x0 + dx, y, brown, 1);
     blend(img, x0, y - 1, green, 1); blend(img, x0 - 1, y - 1, mul(rgb(240, 180, 50), lum), 1); // mother's head and bill
@@ -210,7 +210,7 @@ export class DuckFamily extends Egg {
       const dx = x0 + 5 + k * 3.2, dy = y + Math.sin(age * 4 + k) * 0.3;
       blend(img, dx, dy, fuzz, 1); blend(img, dx - 0.6, dy - 1, fuzz, 1);
     }
-    const sx = -10 + age * 16, near = Math.exp(-(((sx - (x0 + 10)) / 18) ** 2)), sy = 58 - 6 * near; // the windsurfer swerves
+    const sx = -10 + age * 16, near = Math.exp(-(((sx - (x0 + 10)) / 18) ** 2)), sy = ry(58) - 6 * near; // the windsurfer swerves
     for (let i = 0; i < 8; i++) {
       const wdt = Math.max(1, Math.round((1 - i / 8) * 3.5));
       for (let j = 0; j < wdt; j++) blend(img, sx + 1 - j, sy - 1 - i, mul(rgb(255, 90, 60), lum), 1);
@@ -225,7 +225,7 @@ export class Snowman extends Egg {
   layer = "top"; duration = 60; perHour = 1;
   allowed(c) { return c.ground > 0.3 ? c.light : 0; }
   draw(img, c, age) {
-    const fade = smoothFade(age, this.duration, 2), x = 160, base = HORIZON + 1, lum = 0.55 + 0.45 * c.light;
+    const fade = smoothFade(age, this.duration, 2), x = Math.round(rx(160)), base = HORIZON + 1, lum = 0.55 + 0.45 * c.light;
     const snow = mul(rgb(245, 248, 255), lum), coal = rgb(20, 20, 24), built = Math.min(1, age / 8); // rolled and stacked as you watch
     [[2.6, 0], [2.0, 4.2], [1.5, 7.6]].forEach(([r, dy], k) => { if (built * 3 > k) disk(img, x, base - dy - r + 1, r, snow, fade); });
     if (built >= 1) {
@@ -267,7 +267,7 @@ export class Moonbow extends Egg {
     return bright && misty ? c.night : 0;
   }
   draw(img, c, age) {
-    const fade = smoothFade(age, this.duration, 8), cx = Math.min(Math.max(W - c.mx, 50), W - 50), cy = HORIZON + 8, r0 = 36; // opposite the moon
+    const fade = smoothFade(age, this.duration, 8), cx = Math.min(Math.max(W - c.mx, 50), W - 50), cy = HORIZON + (SQUARE ? 12 : 8), r0 = SQUARE ? 56 : 36; // opposite the moon
     for (let y = 0; y < HORIZON; y++) for (let x = 0; x < W; x++) {
       const d = Math.hypot(x - cx, y - cy);
       const band = Math.max(0, 1 - Math.abs(d - r0) / 2.2) * 0.28 * fade, tint = Math.max(0, 1 - Math.abs(d - (r0 - 1.5))) * 0.1 * fade;
@@ -286,7 +286,7 @@ export class SunDogs extends Egg {
     return cold && hazy && c.elev > 3 && c.elev < 25 ? 1 : 0;
   }
   draw(img, c, age) {
-    const fade = smoothFade(age, this.duration, 10), [sx, sy] = c.elev > 0 ? [c.sx, c.sy] : [128, 18];
+    const fade = smoothFade(age, this.duration, 10), [sx, sy] = c.elev > 0 ? [c.sx, c.sy] : [W / 2, ry(18)];
     for (const side of [-1, 1]) { // the parhelia, 22 degrees out, red on the side toward the sun
       const x = sx + side * 26;
       for (let dy = -3; dy <= 3; dy++) {
@@ -316,7 +316,7 @@ export class MoonPlanet extends Egg {
   draw(img, c, age) {
     let name, mx, my;
     if (this.demo) {
-      [mx, my] = c.melev > 3 ? [c.mx, c.my] : [70, 14];
+      [mx, my] = c.melev > 3 ? [c.mx, c.my] : [rx(70), ry(14)];
       name = "VENUS";
       glow(img, mx - 9, my + 3, 3, rgb(255, 250, 230), 0.3); blend(img, mx - 9, my + 3, rgb(255, 250, 230), 1);
     } else {
@@ -326,7 +326,7 @@ export class MoonPlanet extends Egg {
       mx = c.mx; my = c.my;
     }
     const label = `MOON + ${name}`, lx = Math.trunc(Math.min(Math.max(mx + 7, 2), W - label.length * 4 - 2)); // beside the moon
-    text(img, lx, Math.max(10, Math.trunc(my) - 2), label, rgb(200, 210, 235), 0.85 * smoothFade(age, this.duration, 2));
+    text(img, lx, Math.max(SQUARE ? 24 : 10, Math.trunc(my) - 2), label, rgb(200, 210, 235), 0.85 * smoothFade(age, this.duration, 2));
   }
 }
 
@@ -334,7 +334,7 @@ export class Contrails extends Egg {
   static egg = "contrails";
   layer = "mountain"; duration = 50; perHour = 3;
   allowed(c) { return c.now.hour >= 12 && c.elev > -6 && c.elev < 0 && c.veil < 0.5 ? 1 : 0; }
-  begin(c) { const r = c.rng; this.jets = [0, 1].map(() => [r.uniform(-40, 60), r.uniform(4 - TOP * 0.6, 10 - TOP * 0.3), r.uniform(0.15, 0.3), r.uniform(0, 12)]); return true; }
+  begin(c) { const r = c.rng; this.jets = [0, 1].map(() => [r.uniform(rx(-40), rx(60)), r.uniform(ry(4 - TOP * 0.6), ry(10 - TOP * 0.3)), r.uniform(0.15, 0.3), r.uniform(0, 12)]); return true; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 6);
     for (const [x0, y0, slope, t0] of this.jets) {
@@ -357,9 +357,9 @@ export class GodRays extends Egg {
   layer = "mountain"; duration = 80; perHour = 2;
   allowed(c) { return c.wx && c.wx.cc > 0.3 && c.wx.cc < 0.75 && c.now.hour >= 12 && c.elev > 3 && c.elev < 25 ? 1 : 0; }
   draw(img, c, age) {
-    const fade = smoothFade(age, this.duration, 10), [sx, sy] = c.elev > 0 ? [c.sx, c.sy - 6] : [180, 4];
+    const fade = smoothFade(age, this.duration, 10), [sx, sy] = c.elev > 0 ? [c.sx, c.sy - 6] : [rx(180), ry(4)];
     for (let y = -TOP; y < HORIZON; y++) {
-      const below = Math.min(1, Math.max(0, (y - sy) / 20));
+      const below = Math.min(1, Math.max(0, (y - sy) / (20 * KS)));
       if (below <= 0) continue;
       for (let x = 0; x < W; x++) {
         const ang = Math.atan2(y - sy, x - sx);
@@ -375,10 +375,10 @@ export class Climbers extends Egg {
   layer = "mountain"; duration = 150; perHour = 3;
   allowed(c) { return [5, 6].includes(c.now.month) && c.now.hour >= 1 && c.now.hour < 5 && c.veil < 0.5 ? c.night : 0; }
   draw(img, c, age) {
-    const fade = smoothFade(age, this.duration, 8), [sx, sy] = c.summit;
+    const fade = smoothFade(age, this.duration, 8), [sx, sy] = c.summit, kx = SQUARE ? 1.2 : 1, ky = SQUARE ? 1.4 : 1;
     for (let k = 0; k < 7; k++) { // a zig-zag line of climbers, strung out
       const u = Math.min(1, 0.08 + age / this.duration * 0.5 + (6 - k) * 0.045);
-      blend(img, sx + 16 - u * 15 + Math.sin(u * 20) * 1.5, sy + 15 - u * 13, rgb(255, 250, 215), fade * (0.6 + 0.4 * Math.sin(age * 3 + k * 1.7)));
+      blend(img, sx + (16 - u * 15) * kx + Math.sin(u * 20) * 1.5, sy + (15 - u * 13) * ky, rgb(255, 250, 215), fade * (0.6 + 0.4 * Math.sin(age * 3 + k * 1.7)));
     }
   }
 }
@@ -396,10 +396,10 @@ export class Countdown extends Egg {
   draw(img, c, age) {
     if (age < 10) {
       const n = String(10 - Math.trunc(age)), pulse = 1 - (age % 1) * 0.5;
-      bigText(img, W / 2 - n.length * 6, 12, n, mul(rgb(255, 230, 120), pulse), 3);
+      bigText(img, W / 2 - n.length * 6, SQUARE ? 28 : 12, n, mul(rgb(255, 230, 120), pulse), 3);
     } else {
       this.fw.draw(getView(), c, age - 10); // the fireworks draw in the scene's own coordinates
-      if (age < 22) bigText(img, W / 2 - 13 * 4, 13, "HAPPY NEW YEAR", rgb(255, 220, 90), 2, Math.min(1, (22 - age) / 2));
+      if (age < 22) bigText(img, W / 2 - 13 * 4, SQUARE ? 28 : 13, "HAPPY NEW YEAR", rgb(255, 220, 90), 2, Math.min(1, (22 - age) / 2));
     }
   }
 }
@@ -430,7 +430,7 @@ export class BlackCat extends Egg {
   allowed(c) { return c.now.weekday === 4 && c.now.day === 13 ? 1 : 0; }
   draw(img, c, age) {
     const stop = age > 9 && age < 14, moving = age < 9 ? age : (stop ? 9 : age - 5);
-    const x = 100 + moving * 6, y = HORIZON - 1, black = rgb(12, 12, 16), step = Math.trunc(moving * 4) % 2;
+    const x = rx(100) + moving * 6 * SX, y = HORIZON - 1, black = rgb(12, 12, 16), step = Math.trunc(moving * 4) % 2;
     for (let i = 0; i < 4; i++) blend(img, x + i, y - 1, black, 1);
     blend(img, x + step, y, black, 1); blend(img, x + 3 - step, y, black, 1);
     const hx = x + 4;
@@ -460,7 +460,7 @@ export class MoonLanding extends Egg {
   layer = "sky"; duration = 300; perHour = 30; exclusive = false;
   allowed(c) { return isDay(c, 7, 20) && c.melev > 2 && c.w.day < 0.7 ? 1 : 0; }
   draw(img, c, age) {
-    const [mx, my] = c.melev > 2 ? [c.mx, c.my] : [70, 14];
+    const [mx, my] = c.melev > 2 ? [c.mx, c.my] : [rx(70), ry(14)];
     if (c.melev <= 2) disk(img, mx, my, 3.8, rgb(238, 235, 215)); // a stand-in moon for the review
     const gold = rgb(230, 180, 60);
     blend(img, mx - 1, my + 1, gold, 1); blend(img, mx, my + 1, gold, 1); // lander body
@@ -476,7 +476,7 @@ export class Groundhog extends Egg {
   layer = "top"; duration = 16; perHour = 3;
   allowed(c) { return isDay(c, 2, 2) ? c.light : 0; }
   draw(img, c, age) {
-    const sunny = c.light > 0.5 && c.veil < 0.4, x = 158, base = HORIZON + 1, back = sunny ? 8 : 14;
+    const sunny = c.light > 0.5 && c.veil < 0.4, x = Math.round(rx(158)), base = HORIZON + 1, back = sunny ? 8 : 14;
     const up = age < back ? Math.min(1, age / 1.5) : Math.max(0, 1 - (age - back) / 0.6);
     const lum = 0.55 + 0.45 * c.light, fur = mul(rgb(130, 90, 55), lum);
     blend(img, x - 2, base, mul(rgb(90, 70, 50), lum), 1); blend(img, x + 2, base, mul(rgb(90, 70, 50), lum), 1); // the burrow
@@ -514,7 +514,7 @@ export class Dragon extends Egg {
   allowed(c) { return c.light + 0.6 * c.w.twi + 0.3 * c.night; }
   draw(img, c, age) {
     const [sx, sy] = c.summit, a = -Math.PI / 2 + age / this.duration * 2.4 * Math.PI;
-    const x = sx + Math.cos(a) * 60, y = sy + 12 + Math.sin(a) * 7, d = Math.sin(a) > 0 ? -1 : 1; // facing the way it flies
+    const x = sx + Math.cos(a) * (SQUARE ? 48 : 60), y = sy + (12 + Math.sin(a) * 7) * (SQUARE ? 1.4 : 1), d = Math.sin(a) > 0 ? -1 : 1; // facing the way it flies
     const lum = 0.55 + 0.45 * c.light, body = mul(rgb(170, 40, 40), lum), belly = mul(rgb(240, 180, 80), lum), wing = mul(rgb(120, 25, 30), lum);
     for (let i = -4; i <= 4; i++) blend(img, x + i, y + Math.sin(age * 5 + i * 0.6) * 0.5, body, 1); // long body
     for (let i = 5; i < 9; i++) blend(img, x - d * i, y + (i - 4) * 0.4 + Math.sin(age * 5 + i) * 0.6, body, 1); // tail

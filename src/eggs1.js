@@ -1,6 +1,6 @@
 // Easter eggs, batch 1 (the board's eggs.py): meteor, aurora, UFO, Sasquatch, salmon, sternwheeler,
 // rainbow, sky whale, steam, spider, mega jump, osprey (and the eagle), shark, humpback.
-import { W, H, HORIZON, TOP, rgb, blend, lighten, line, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, SQUARE, SX, rx, ry, unry, wdepth, rgb, blend, lighten, line, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash } from "./eggs.js";
 
 const TAU = 2 * Math.PI;
@@ -11,7 +11,7 @@ export class Meteor extends Egg {
   allowed(c) { return Math.max(0, (c.night - 0.4) / 0.6); }
   begin(c) {
     const r = c.rng;
-    this.x = r.uniform(30, W - 30); this.y = r.uniform(10 - TOP, 8);
+    this.x = r.uniform(30, W - 30); this.y = r.uniform(ry(10 - TOP), ry(8));
     this.vx = r.choice([-1, 1]) * r.uniform(90, 140); this.vy = r.uniform(25, 45);
     return true;
   }
@@ -32,9 +32,9 @@ export class Aurora extends Egg {
     for (let x = 0; x < W; x++) {
       const edge = 20 + 3 * Math.sin(x * 0.035 + t * 0.2) + 2 * Math.sin(x * 0.011 - t * 0.13); // curtain bottom
       const rays = 0.6 + 0.4 * Math.sin(x * 0.3 + 2.5 * Math.sin(x * 0.04 + t * 0.5) + t * 0.9);
-      const height = 14 + TOP * 0.6 + 4 * Math.sin(x * 0.02 + t * 0.3);
+      const height = 14 + (SQUARE ? 20 : TOP * 0.6) + 4 * Math.sin(x * 0.02 + t * 0.3);
       for (let y = -TOP; y < HORIZON; y++) {
-        const above = edge - y;
+        const above = edge - unry(y); // in the 256x64 board's rows
         const body = Math.min(1, Math.max(0, 1 - above / height)) * (above > -1 ? 1 : 0);
         const glow = body ** 1.5 + 0.8 * Math.exp(-((above / 1.3) ** 2));
         const up = Math.min(1, Math.max(0, above / height));
@@ -50,12 +50,13 @@ export class UFO extends Egg {
   layer = "water"; duration = 16; perHour = 0.2;
   allowed(c) { return c.w.night; }
   depthRow() { return this.fishY; }
-  begin(c) { this.hx = c.rng.uniform(120, 200); this.fishY = c.rng.uniform(50, 58); return true; }
+  begin(c) { this.hx = c.rng.uniform(rx(120), rx(200)); this.fishY = c.rng.uniform(ry(50), ry(58)); return true; }
   draw(img, c, age) {
     let x, y;
-    if (age < 4) { const p = 1 - (1 - age / 4) ** 2; x = W + 10 + (this.hx - W - 10) * p; y = 13; } // glide in
-    else if (age < 12) { x = this.hx + Math.sin(age * 2) * 1.2; y = 13 + Math.sin(age * 3.1) * 0.8; } // hover
-    else { const p = (age - 12) / 4; x = this.hx - p * p * 260; y = 13 - p * 30; } // zip away up-left
+    const hy = ry(13);
+    if (age < 4) { const p = 1 - (1 - age / 4) ** 2; x = W + 10 + (this.hx - W - 10) * p; y = hy; } // glide in
+    else if (age < 12) { x = this.hx + Math.sin(age * 2) * 1.2; y = hy + Math.sin(age * 3.1) * 0.8; } // hover
+    else { const p = (age - 12) / 4; x = this.hx - p * p * 260 * SX; y = ry(13 - p * 30); } // zip away up-left
     if (age > 5 && age < 11.5) { // tractor beam with a salmon riding it up
       const flick = 0.18 + 0.06 * Math.sin(age * 25);
       for (let yy = Math.trunc(y) + 2; yy <= Math.trunc(this.fishY); yy++) {
@@ -110,9 +111,9 @@ export class Salmon extends Egg {
   layer = "water"; duration = 4.6; perHour = 1.0;
   allowed(c) { return c.light + 0.5 * c.w.twi; }
   depthRow() { return this.y0; }
-  begin(c) { const r = c.rng; this.x0 = r.uniform(30, W - 30); this.y0 = r.uniform(44, 60); this.dir = r.choice([-1, 1]); return true; }
+  begin(c) { const r = c.rng; this.x0 = r.uniform(30, W - 30); this.y0 = r.uniform(ry(44), ry(60)); this.dir = r.choice([-1, 1]); return true; }
   draw(img, c, age) {
-    const sc = 1 + (this.y0 - 40) / 21 * 0.6;
+    const sc = 1 + wdepth(this.y0) * 0.6;
     [0, 1.2, 2.5].forEach((start, n) => {
       const p = (age - start) / 1.1;
       if (p < 0 || p > 1.6) return;
@@ -146,9 +147,9 @@ export class Sternwheeler extends Egg {
   layer = "water"; perHour = 0.3; duration = (W + 50) / 7;
   allowed(c) { return c.w.day + 0.7 * c.w.gold; }
   begin(c) { this.dir = c.rng.choice([-1, 1]); return true; }
-  depthRow() { return 48; }
+  depthRow() { return ry(48); }
   draw(img, c, age) {
-    const x = Math.trunc(this.dir > 0 ? -40 + age * Sternwheeler.SPEED : W + 10 - age * Sternwheeler.SPEED), y = 47;
+    const x = Math.trunc(this.dir > 0 ? -40 + age * Sternwheeler.SPEED : W + 10 - age * Sternwheeler.SPEED), y = Math.round(ry(47));
     const white = rgb(238, 236, 228), window = rgb(40, 60, 110), red = rgb(200, 40, 40), black = rgb(25, 25, 30);
     const X = i => (this.dir > 0 ? x + i : x + 27 - i); // i = 0 at the stern (the wheel) .. 27 at the bow
     for (let i = 2; i < 27; i++) { blend(img, X(i), y, white, 1); blend(img, X(i), y + 1, rgb(60, 55, 60), 1); }
@@ -172,7 +173,7 @@ export class Rainbow extends Egg {
   allowed(c) { return c.elev > 6 && c.elev < 42 ? c.w.day : 0; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 8);
-    const cx = Math.min(Math.max(W - c.sx, 50), W - 50), cy = HORIZON + 8, r0 = 38; // opposite the sun
+    const cx = Math.min(Math.max(W - c.sx, 50), W - 50), cy = HORIZON + (SQUARE ? 12 : 8), r0 = SQUARE ? 58 : 38; // opposite the sun
     const bands = Rainbow.BANDS.map(b => rgb(...b));
     for (let y = 0; y < HORIZON; y++) for (let x = 0; x < W; x++) {
       const d = Math.hypot(x - cx, y - cy);
@@ -195,7 +196,7 @@ export class SkyWhale extends Egg {
   layer = "mountain"; perHour = 0.08; duration = (W + 50) / 9;
   begin(c) { this.dir = c.rng.choice([-1, 1]); return true; }
   draw(img, c, age) {
-    const x = this.dir > 0 ? -30 + age * 9 : W + 4 - age * 9, y = 9 - TOP / 2 + Math.sin(age * 0.6) * 2.5;
+    const x = this.dir > 0 ? -30 + age * 9 : W + 4 - age * 9, y = (SQUARE ? ry(5) : 9 - TOP / 2) + Math.sin(age * 0.6) * 2.5;
     const lum = 0.55 + 0.45 * (1 - c.night);
     const pal = { b: mul(rgb(205, 190, 240), lum), t: mul(rgb(205, 190, 240), lum), l: mul(rgb(250, 235, 215), lum),
       e: rgb(20, 10, 30), d: mul(rgb(150, 140, 180), lum) };
@@ -233,13 +234,13 @@ export class Spider extends Egg {
   static egg = "spider";
   static ROWS = ["l..k..l", ".lkkkl.", "lkkwkkl", ".kEkEk.", "l.ggg.l", ".l...l."];
   layer = "top"; duration = 14; perHour = 0.25;
-  begin(c) { this.x = Math.trunc(c.rng.uniform(96, 156)); return true; }
+  begin(c) { this.x = Math.trunc(c.rng.uniform(rx(96), rx(156))); return true; }
   draw(img, c, age) {
     let y;
-    const top = -7 - TOP; // from the top of the frame
-    if (age < 3) y = top + (20 - top) * (1 - (1 - age / 3) ** 3);
-    else if (age < 10) y = 20 + Math.sin((age - 3) * 2.2) * 1.2;
-    else y = 20 - (age - 10) / 4 * (20 - top);
+    const top = -7 - TOP, hang = SQUARE ? 40 : 20; // from the top of the frame
+    if (age < 3) y = top + (hang - top) * (1 - (1 - age / 3) ** 3);
+    else if (age < 10) y = hang + Math.sin((age - 3) * 2.2) * 1.2;
+    else y = hang - (age - 10) / 4 * (hang - top);
     line(img, this.x + 3, -TOP, this.x + 3, y, rgb(210, 210, 220), 0.45);
     const glint = 0.6 + 0.4 * Math.sin(age * 5);
     const pal = { k: rgb(38, 36, 44), l: rgb(70, 58, 50), w: rgb(235, 235, 235), E: mul(rgb(255, 255, 255), glint), g: rgb(40, 210, 150) };
@@ -277,10 +278,10 @@ export class Osprey extends Egg {
     this.variant = null; this.lastVariant = variant;
     this.eagle = variant === "eagle";
     this.duration = this.eagle ? 12 : Osprey.DURATION;
-    if (variant === "left") { this.dir = -1; this.tx = r.uniform(96, 118); }
-    else if (variant === "eagle") { this.dir = r.choice([-1, 1]); this.tx = r.uniform(120, 150); }
-    else { this.dir = r.choice([-1, 1]); this.tx = r.uniform(110, 220); }
-    this.ty = r.uniform(47, 57);
+    if (variant === "left") { this.dir = -1; this.tx = r.uniform(rx(96), rx(118)); }
+    else if (variant === "eagle") { this.dir = r.choice([-1, 1]); this.tx = r.uniform(rx(120), rx(150)); }
+    else { this.dir = r.choice([-1, 1]); this.tx = r.uniform(rx(110), rx(220)); }
+    this.ty = r.uniform(ry(47), ry(57));
     this.x0 = this.dir > 0 ? -12 : W + 12;
     return true;
   }
@@ -292,13 +293,13 @@ export class Osprey extends Egg {
     const t1 = O.T_GLIDE, t2 = t1 + O.T_DIVE, t3 = t2 + O.T_SPLASH, t4 = t3 + O.T_CLIMB;
     if (age < t1) { // glide in, with a lazy flap now and then
       const p = age / t1;
-      const x = this.x0 + (this.tx - this.x0) * p, y = 10 + 2 * Math.sin(p * 5);
+      const x = this.x0 + (this.tx - this.x0) * p, y = ry(10) + 2 * Math.sin(p * 5);
       sprite(img, Math.trunc(x) - 5, Math.trunc(y), Math.trunc(age * 4) % 5 === 0 ? O.FLAP : O.GLIDE, pal, d < 0);
       return;
     }
     if (age < t2) { // stoop: accelerating dive
       const p = (age - t1) / O.T_DIVE;
-      sprite(img, Math.trunc(this.tx + d * 6 * p) - 1, Math.trunc(11 + (this.ty - 4 - 11) * p * p), O.STOOP, pal);
+      sprite(img, Math.trunc(this.tx + d * 6 * p) - 1, Math.trunc(ry(11) + (this.ty - 4 - ry(11)) * p * p), O.STOOP, pal);
       return;
     }
     const sx = this.tx + d * 6;
@@ -329,11 +330,11 @@ export class Osprey extends Egg {
     const O = Osprey, d = this.dir, t3 = O.T_GLIDE + O.T_DIVE + O.T_SPLASH, t4 = t3 + O.T_CLIMB, sx = this.tx + d * 6;
     if (age < t4) { // climb out heavily, fish in the talons
       const p = (age - t3) / O.T_CLIMB;
-      return [sx + d * 18 * p, this.ty - 2 - (this.ty - 30) * (1 - (1 - p) ** 2), Math.trunc(age * 7) % 2 ? O.FLAP : O.GLIDE];
+      return [sx + d * 18 * p, this.ty - 2 - (this.ty - ry(30)) * (1 - (1 - p) ** 2), Math.trunc(age * 7) % 2 ? O.FLAP : O.GLIDE];
     }
     let p = (age - t4) / (O.DURATION - t4); // away, up and out of frame
     if (this.eagle && age > t4 + 1) p += (age - t4 - 1) * 0.08; // mugged: fleeing fast
-    return [sx + d * (18 + 150 * p), 30 - 42 * p, Math.trunc(age * 5) % 2 ? O.FLAP : O.GLIDE];
+    return [sx + d * (18 + 150 * SX * p), ry(30 - 42 * p), Math.trunc(age * 5) % 2 ? O.FLAP : O.GLIDE];
   }
 
   // The bald eagle swoops in, snatches the fish at the top of the climb; returns whether the osprey keeps it.
@@ -347,7 +348,7 @@ export class Osprey extends Egg {
     if (age < tMeet) {
       const p = (age - (tMeet - 3)) / 3;
       if (p < 0) return true;
-      ex = mx - d * 110 * (1 - p); ey = my - 4 - 18 * (1 - p) ** 2 + 3; // a long descending swoop
+      ex = mx - d * 110 * SX * (1 - p); ey = my - 4 - 18 * (1 - p) ** 2 + 3; // a long descending swoop
     } else {
       const q = age - tMeet;
       ex = mx + d * 22 * q; ey = my - 1 - 3 * q;
@@ -394,7 +395,7 @@ export class Shark extends Egg {
   }
   depthRow() { return this.row; }
   draw(img, c, age) {
-    const S = Shark, dt = c.dt, sc = 0.6 + (this.row - 40) / 21 * 0.9;
+    const S = Shark, dt = c.dt, sc = 0.6 + wdepth(this.row) * 0.9;
     const finCol = mul(rgb(70, 78, 92), 0.6 + 0.4 * c.light), wake = rgb(235, 240, 255);
     this.phaseT += dt;
     if (this.phase === "hunt") {
@@ -441,7 +442,7 @@ export class Humpback extends Egg {
   static FLUKES = ["dd.......dd", "ddd.....ddd", ".dddd.dddd.", "...ddddd...", "....ddd...."];
   layer = "water"; perHour = 0.08; duration = (W + 60) / 8.5;
   allowed(c) { return c.light + 0.4 * c.w.twi; }
-  begin(c) { this.row = c.rng.uniform(53, 57); this.breachAt = (W / 2 + 20) / Humpback.SPEED; return true; }
+  begin(c) { this.row = c.rng.uniform(ry(53), ry(57)); this.breachAt = (W / 2 + 20) / Humpback.SPEED; return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const x = W + 20 - age * Humpback.SPEED, y = this.row, lum = 0.6 + 0.4 * c.light;

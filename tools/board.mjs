@@ -1,8 +1,11 @@
 // Run the scene for a physical 256x64 LED board: renders at the board's own size (no website sky) and sends
 // each frame as DDP to a panel driver (the Pi's ledpanel program, or the ESP32 clock). Runs under Node 18+.
 //
-//   node tools/board.mjs [--host 127.0.0.1] [--fps 20] [--dir ~/gorge-board]
+//   node tools/board.mjs [--square] [--host 127.0.0.1] [--fps 20] [--dir ~/gorge-board]
 //   node tools/board.mjs --snap out.png [--at HH:MM] [--date YYYY-MM-DD] [--egg NAME] [--weather rain] [--seconds 3]
+//
+// --square is the 128x128 board (four 64x64 panels as 2x2), recomposed from assets/scene_square.json
+// (tools/square_layout.mjs); without it, the 256x64 board.
 //
 // --dir holds the board's private files and its trigger files:
 //   birthdays.json   [{"name": "Sam", "date": "06-22"}, ...]  (never part of the website)
@@ -17,6 +20,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 globalThis.GORGE_TOP = 0; // the board's own frame: must be set before the scene modules load
+const SQUARE = process.argv.includes("--square");
+if (SQUARE) globalThis.GORGE_GEOM = { square: true };
 const { W, H } = await import("../src/pix.js");
 const { Scene } = await import("../src/scene.js");
 const { LiveWind, PRESETS } = await import("../src/weather.js");
@@ -31,6 +36,7 @@ const args = { host: "127.0.0.1", port: 4048, fps: 20, dir: join(homedir(), "gor
 for (let i = 2; i < process.argv.length; i++) {
   const k = process.argv[i].replace(/^--/, ""), v = process.argv[i + 1];
   if (k === "egg") { args.egg.push(v); i++; } else if (k === "egg-show") args.eggShow = true;
+  else if (k === "square") continue;
   else { args[k] = v; i++; }
 }
 const stamp = () => new Date().toTimeString().slice(0, 8);
@@ -56,9 +62,9 @@ const boardLabels = ms => {
 };
 
 // ---- the scene
-const data = JSON.parse(readFileSync(new URL("../assets/scene.json", import.meta.url)));
+const data = JSON.parse(readFileSync(new URL(SQUARE ? "../assets/scene_square.json" : "../assets/scene.json", import.meta.url)));
 loadSky(args.sky || "https://darthnut.github.io/hood-river-live/assets/sky.json");
-const scene = new Scene(data, { eggClasses: ALL_EGGS, labels: boardLabels, log });
+const scene = new Scene(data, { eggClasses: ALL_EGGS, labels: boardLabels, log, eggRate: args["egg-rate"] != null ? Number(args["egg-rate"]) : 1 });
 scene.eggs.shared = false; // the board rolls its own dice, as it always has
 const ctl = new Controller(scene, new LiveWind(), log);
 if (args.at || args.date) {
@@ -138,7 +144,7 @@ function send(frame) {
 
 const period = 1000 / Number(args.fps);
 let next = performance.now(), stats = { n: 0, ms: 0, worst: 0, late: 0 }, statT = Date.now();
-log(`streaming 256x64 at ${args.fps} fps to ${args.host}:${args.port}; triggers in ${args.dir}`);
+log(`streaming ${W}x${H} at ${args.fps} fps to ${args.host}:${args.port}; triggers in ${args.dir}`);
 function tick() {
   const a = performance.now();
   send(render(Date.now(), period / 1000));

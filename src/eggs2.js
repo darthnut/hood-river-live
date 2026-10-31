@@ -1,6 +1,6 @@
 // Easter eggs, batch 2 (the board's eggs_more.py): Gorge wildlife and history, calendar specials, and
 // a few just for fun.
-import { W, H, HORIZON, TOP, rgb, blend, line, text, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, SX, KS, rx, ry, rgb, blend, line, text, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash, disk, glow, dayNumber } from "./eggs.js";
 import { Rng } from "./rng.js";
 import { hoodRiverTime, localParts } from "./sky.js";
@@ -14,7 +14,7 @@ export class SeaLion extends Egg {
   static HEAD = ["..bb.", ".bbbb", "bbebb", ".bbbn"];
   layer = "water"; duration = 7; perHour = 0.3;
   allowed(c) { return c.light + 0.5 * c.w.twi; }
-  begin(c) { this.x = c.rng.uniform(60, W - 60); this.row = c.rng.uniform(46, 56); this.dir = c.rng.choice([-1, 1]); return true; }
+  begin(c) { this.x = c.rng.uniform(rx(60), W - rx(60)); this.row = c.rng.uniform(ry(46), ry(56)); this.dir = c.rng.choice([-1, 1]); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const lum = 0.55 + 0.45 * c.light;
@@ -53,7 +53,7 @@ export class Geese extends Egg {
   static egg = "geese";
   layer = "mountain"; duration = 18; perHour = 1.2; exclusive = false;
   allowed(c) { return [3, 4, 9, 10, 11].includes(c.now.month) ? c.light + 0.6 * c.w.twi : 0; }
-  begin(c) { this.dir = c.rng.choice([-1, 1]); this.y = c.rng.uniform(8, 16); this.n = c.rng.integers(9, 14); return true; }
+  begin(c) { this.dir = c.rng.choice([-1, 1]); this.y = c.rng.uniform(ry(8), ry(16)); this.n = c.rng.integers(9, 14); return true; }
   draw(img, c, age) {
     const lead = this.dir < 0 ? W + 30 - age * 17 : -30 + age * 17;
     const col = c.w.day > 0.3 ? rgb(38, 34, 30) : rgb(24, 20, 26);
@@ -76,7 +76,7 @@ export class Heron extends Egg {
     const lum = 0.55 + 0.45 * c.light, T_FLY = Heron.T_FLY, T_STAND = Heron.T_STAND;
     const body = mul(rgb(120, 140, 170), lum), dark = mul(rgb(50, 60, 80), lum), bill = mul(rgb(220, 190, 90), lum);
     const [px, py] = c.perch, d = this.dir;
-    const start = d > 0 ? [-15, HORIZON - 10] : [W + 15, HORIZON - 10], end = d > 0 ? [W + 20, 6] : [-20, 6];
+    const start = d > 0 ? [-15, ry(26)] : [W + 15, ry(26)], end = d > 0 ? [W + 20, ry(6)] : [-20, ry(6)];
     if (age < T_FLY || age > T_FLY + T_STAND) { // flying: neck tucked, legs trailing
       let x, y;
       if (age < T_FLY) { const p = age / T_FLY; x = start[0] + (px - start[0]) * p; y = start[1] + (py - 4 - start[1]) * p; }
@@ -103,11 +103,11 @@ export class Paragliders extends Egg {
   static COLORS = [[255, 70, 90], [60, 200, 255], [255, 210, 50]];
   layer = "shore"; duration = 28; perHour = 0.25;
   allowed(c) { return c.w.day + 0.5 * c.w.gold; }
-  begin(c) { this.pilots = [0, 1, 2].map(k => [c.rng.uniform(205, 245), c.rng.uniform(8, 15), c.rng.uniform(0, 6.3), k]); return true; }
+  begin(c) { this.pilots = [0, 1, 2].map(k => [c.rng.uniform(rx(205), rx(245)), c.rng.uniform(ry(8), ry(15)), c.rng.uniform(0, 6.3), k]); return true; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 2);
     for (const [x0, y0, ph, k] of this.pilots) {
-      const y = y0 + age * 0.75, x = x0 - age * 3.2 + 6 * Math.sin(age * 0.6 + ph);
+      const y = y0 + age * 0.75 * KS, x = x0 - age * 3.2 * SX + 6 * Math.sin(age * 0.6 + ph);
       if (y > HORIZON - 4) continue; // landed
       const col = rgb(...Paragliders.COLORS[k]);
       for (let j = -3; j <= 3; j++) blend(img, x + j, y + j * j * 0.18, col, fade);
@@ -123,7 +123,7 @@ export class Sturgeon extends Egg {
   static LENGTH = 30;
   layer = "water"; duration = 8; perHour = 0.05;
   allowed(c) { return c.light + 0.4 * c.w.twi; }
-  begin(c) { this.x = c.rng.uniform(40, W - 70); this.row = c.rng.uniform(50, 57); return true; }
+  begin(c) { this.x = c.rng.uniform(rx(40), W - 36 - rx(34)); this.row = c.rng.uniform(ry(50), ry(57)); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const lum = 0.55 + 0.45 * c.light, L = Sturgeon.LENGTH;
@@ -181,7 +181,7 @@ export class Canoes extends Egg {
   static SPEED = 6.5;
   layer = "water"; perHour = 0.4; duration = (W + 50) / 6.5;
   allowed(c) { return c.now.month === 10 ? c.light + 0.3 * c.w.twi : 0; }
-  begin(c) { this.rows = [c.rng.uniform(46, 49), c.rng.uniform(53, 56)]; return true; }
+  begin(c) { this.rows = [c.rng.uniform(ry(46), ry(49)), c.rng.uniform(ry(53), ry(56))]; return true; }
   depthRow() { return this.rows[0]; }
   draw(img, c, age) {
     const lum = 0.5 + 0.5 * c.light;
@@ -209,8 +209,8 @@ export class TallShip extends Egg {
     const variant = this.variant || (c.rng.random() < 0.35 ? "lift" : "far");
     this.variant = null; this.lastVariant = variant === "lift" ? "lift" : "far";
     this.lift = this.lastVariant === "lift";
-    if (this.lift) { this.k = 2.2; this.speed = 8; this.row = 57; }
-    else { this.k = 1; this.speed = TallShip.SPEED; this.row = c.rng.uniform(41, 44); }
+    if (this.lift) { this.k = 2.2; this.speed = 8; this.row = ry(57); }
+    else { this.k = 1; this.speed = TallShip.SPEED; this.row = c.rng.uniform(ry(41), ry(44)); }
     this.duration = (W + 20 + 24 * this.k) / this.speed + (this.lift ? 6 : 0);
     this.saluteAt = this.duration * (this.lift ? 0.25 : 0.5);
     this.scene = c.scene;
@@ -220,7 +220,7 @@ export class TallShip extends Egg {
   draw(img, c, age) {
     const k = this.k, x = W + 20 - age * this.speed, y = this.row; // sailing upriver (left)
     if (this.lift) { // raise the span before the bow arrives; lower it once the stern is clear
-      const up = Math.min(1, Math.max(0, (130 - x) / 50)), down = Math.min(1, Math.max(0, (-24 * k - 5 - x) / 30));
+      const up = Math.min(1, Math.max(0, (rx(130) - x) / rx(50))), down = Math.min(1, Math.max(0, (-24 * k - 5 - x) / 30));
       this.scene.liftRaise = age > this.duration - 0.2 ? 0 : up * (1 - down);
     }
     const lum = 0.5 + 0.5 * c.light;
@@ -273,7 +273,7 @@ export class Fireworks extends Egg {
       const count = r.random() < 0.35 ? 2 : 1;
       for (let q = 0; q < count; q++) {
         const n = r.integers(32, 50);
-        this.bursts.push({ x: r.uniform(30, W - 30), y: r.uniform(5 - TOP * 0.6, 19), t: age, launch: 0.6,
+        this.bursts.push({ x: r.uniform(rx(30), W - rx(30)), y: r.uniform(ry(5 - TOP * 0.6), ry(19)), t: age, launch: 0.6,
           col: rgb(...Fireworks.PALETTE[r.integers(Fireworks.PALETTE.length)]),
           // each spark at its own speed so the burst fills in, not a hollow ring
           dirs: Array.from({ length: n }, () => { const a = r.uniform(0, 2 * Math.PI); return [Math.cos(a), Math.sin(a), r.uniform(0.35, 1)]; }),
@@ -320,7 +320,7 @@ export class Halloween extends Egg {
     const wins = c.scene.windows, idx = [...wins.keys()];
     for (let i = idx.length - 1; i > 0; i--) { const j = c.rng.integers(i + 1); [idx[i], idx[j]] = [idx[j], idx[i]]; }
     this.lanterns = idx.slice(0, Math.min(14, idx.length)).map(i => wins[i]);
-    this.y = c.melev > 0 ? c.my - 2 : 10;
+    this.y = c.melev > 0 ? c.my - 2 : ry(10);
     return true;
   }
   draw(img, c, age) {
@@ -341,7 +341,7 @@ export class Christmas extends Egg {
   static egg = "christmas";
   layer = "water"; duration = 14; perHour = 6; exclusive = false;
   allowed(c) { return c.now.month === 12 && c.now.day === 24 ? isNight(c) : 0; }
-  begin(c) { this.y = c.melev > 0 ? c.my - 1 : 11; return true; }
+  begin(c) { this.y = c.melev > 0 ? c.my - 1 : ry(11); return true; }
   draw(img, c, age) {
     const x = W + 20 - age * (W + 60) / this.duration, y = this.y + Math.sin(age * 1.1) * 2;
     const red = rgb(210, 30, 30), gold = rgb(230, 190, 60), white = rgb(240, 240, 240), brown = rgb(110, 70, 40);
@@ -405,7 +405,7 @@ export class HarvestMoon extends Egg {
     const near = Math.abs(dayNumber(c.now.year, c.now.month, c.now.day) - dayNumber(y, m, d)) <= 1;
     return near && c.night > 0.3 && c.melev > -2 && c.melev < 18 ? 1 : 0;
   }
-  begin(c) { this.forcedPos = c.melev > -2 && c.melev < 18 ? null : [44, 24]; return true; } // forced: low in the east
+  begin(c) { this.forcedPos = c.melev > -2 && c.melev < 18 ? null : [rx(44), ry(24)]; return true; } // forced: low in the east
   draw(img, c, age) {
     const [x, y] = this.forcedPos || [c.mx, c.my];
     const fade = smoothFade(age, this.duration, 4) * (1 - 0.8 * c.veil);
@@ -426,7 +426,7 @@ export class Satellites extends Egg {
   static egg = "satellites";
   layer = "sky"; duration = 26; perHour = 0.4; exclusive = false;
   allowed(c) { return c.night > 0.6 && c.veil < 0.5 ? 1 : 0; }
-  begin(c) { this.y0 = c.rng.uniform(10 - TOP, 22); this.slope = c.rng.uniform(-0.35, -0.1); this.n = c.rng.integers(20, 30); return true; }
+  begin(c) { this.y0 = c.rng.uniform(ry(10 - TOP), ry(22)); this.slope = c.rng.uniform(-0.35, -0.1); this.n = c.rng.integers(20, 30); return true; }
   draw(img, c, age) {
     const head = -10 + age * 13;
     for (let k = 0; k < this.n; k++) {
@@ -441,12 +441,12 @@ export class Hydroplanes extends Egg {
   static SPEED = 62;
   layer = "water"; duration = 8; perHour = 0.2;
   allowed(c) { return c.w.day + 0.5 * c.w.gold; }
-  begin(c) { this.dir = c.rng.choice([-1, 1]); this.rows = [c.rng.uniform(47, 50), c.rng.uniform(54, 58)]; this.spray = []; this.rng = c.rng; return true; }
+  begin(c) { this.dir = c.rng.choice([-1, 1]); this.rows = [c.rng.uniform(ry(47), ry(50)), c.rng.uniform(ry(54), ry(58))]; this.spray = []; this.rng = c.rng; return true; }
   depthRow() { return (this.rows[0] + this.rows[1]) / 2; }
   draw(img, c, age) {
     const d = this.dir;
     this.rows.forEach((row, k) => {
-      const x = d > 0 ? -15 + age * (Hydroplanes.SPEED - 4 * k) : W + 15 - age * (Hydroplanes.SPEED - 4 * k);
+      const v = Hydroplanes.SPEED * SX - 4 * k, x = d > 0 ? -15 + age * v : W + 15 - age * v;
       if (age < this.duration - 1.5) {
         for (let q = 0; q < 4; q++) this.spray.push([x - d * 5, row, age, this.rng.uniform(-1, 1)]);
         const hull = rgb(245, 245, 245);
@@ -468,7 +468,7 @@ export class BigSpider extends Egg {
   static egg = "bigspider";
   layer = "top"; duration = 7; perHour = 0.15;
   begin(c) {
-    this.x = c.rng.uniform(50, W - 50);
+    this.x = c.rng.uniform(Math.min(50, W / 2 - 14), W - Math.min(50, W / 2 - 14));
     const r = new Rng(Math.trunc(this.x));
     this.hair = Array.from({ length: 16 * 26 }, () => r.random());
     return true;

@@ -1,22 +1,25 @@
 // Render eggs at chosen moments to a PNG contact sheet, from the command line (Node 18+).
-//   node tools/moments.mjs out.png "osprey@14:00@5" "ufo@2026-10-31 22:00@8" "-@13:00@2@rain" ...
-// Each spec is egg@time@seconds[@weather]; "-" renders no egg.
+//   node tools/moments.mjs [--square] out.png "osprey@14:00@5" "ufo@2026-10-31 22:00@8" "-@13:00@2@rain" ...
+// Each spec is egg@time@seconds[@weather]; "-" renders no egg. --square renders the 128x128 board.
 // Mirrors the board's egg_moments.py: a steady 28 mph west wind, the clock held at the chosen time.
 import { readFileSync, writeFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
-import { Scene } from "../src/scene.js";
-import { ALL_EGGS } from "../src/eggs_all.js";
-import { hoodRiverTime } from "../src/sky.js";
-import { W, FULL_H as H, text } from "../src/pix.js";
-import { setSky } from "../src/skyfeeds.js";
 
-const [out, ...specs] = process.argv.slice(2);
-const data = JSON.parse(readFileSync(new URL("../assets/scene.json", import.meta.url)));
+const argv = process.argv.slice(2), SQUARE = argv.includes("--square");
+if (SQUARE) globalThis.GORGE_GEOM = { square: true }; // before the scene modules load
+const { Scene } = await import("../src/scene.js");
+const { ALL_EGGS } = await import("../src/eggs_all.js");
+const { hoodRiverTime } = await import("../src/sky.js");
+const { W, FULL_H: H, text } = await import("../src/pix.js");
+const { setSky } = await import("../src/skyfeeds.js");
+
+const [out, ...specs] = argv.filter(a => a !== "--square");
+const data = JSON.parse(readFileSync(new URL(SQUARE ? "../assets/scene_square.json" : "../assets/scene.json", import.meta.url)));
 try { setSky(JSON.parse(readFileSync(new URL("../assets/sky.json", import.meta.url)))); } catch (e) { /* no live sky data */ }
 const wind = { speed: 28, gust: 36, dir: 270, cloud: 0, rain: 0, code: 0, snowfall: 0, snow_depth: 0,
   visibility: 24000, temp: 60, pm25: 0, live: true, compass: () => "W" };
 
-const S = 3, LABEL = 8, TW = W * S, TH = H * S + LABEL * S, GAP = 6, COLS = 2;
+const S = SQUARE ? 2 : 3, LABEL = 8, TW = W * S, TH = H * S + LABEL * S, GAP = 6, COLS = SQUARE ? 6 : 2;
 const rows = Math.ceil(specs.length / COLS);
 const sheetW = COLS * TW + (COLS - 1) * GAP, sheetH = rows * TH + (rows - 1) * GAP;
 const sheet = new Uint8Array(sheetW * sheetH * 3).fill(24);
@@ -37,7 +40,7 @@ specs.forEach((spec, n) => {
   do { img = sc.render(t, 0.05, wind, now); t += 0.05; } while (t - start < Number(age));
   // label strip, drawn with the scene's own font
   const lab = new Float32Array(W * LABEL * 3).fill(0.09);
-  text(lab, 1, 1, `${name} ${at} +${age}S`.slice(0, 60), [0.9, 0.9, 0.9], 1);
+  text(lab, 1, 1, `${name} ${at} +${age}S`.slice(0, Math.floor(W / 4) - 1), [0.9, 0.9, 0.9], 1);
   const ox = (n % COLS) * (TW + GAP), oy = Math.floor(n / COLS) * (TH + GAP);
   const put = (src, h, y0) => {
     for (let yy = 0; yy < h * S; yy++) for (let xx = 0; xx < TW; xx++) {

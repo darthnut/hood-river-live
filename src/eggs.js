@@ -1,5 +1,5 @@
 // Easter-egg framework: the manager, plus helpers the eggs and the rider code share.
-import { blend, rgb, TOP } from "./pix.js";
+import { W, HORIZON, SQUARE, blend, rgb, ry, TOP } from "./pix.js";
 import { Rng } from "./rng.js";
 
 export const smoothFade = (age, duration, edge) => Math.max(0, Math.min(1, age / edge, (duration - age) / edge));
@@ -34,9 +34,9 @@ export function glow(img, cx, cy, r, col, alpha) {
 // First land row at column x in the town (optionally only of the given material codes), or null.
 export function landTop(scene, x, codes = null) {
   x = Math.trunc(x);
-  if (x < 0 || x >= 256) return null;
-  for (let y = 0; y < 36; y++) {
-    const m = scene.land[y * 256 + x];
+  if (x < 0 || x >= W) return null;
+  for (let y = 0; y < HORIZON; y++) {
+    const m = scene.land[y * W + x];
     if (m && (!codes || codes.includes(m))) return y;
   }
   return null;
@@ -44,8 +44,9 @@ export function landTop(scene, x, codes = null) {
 
 // Screen position for an azimuth/elevation, facing south: east left, south centre, west right. Low in
 // the sky it matches the board; higher up it climbs into the website's extra sky, below the caption rows.
-export const skyXY = (az, el) => [(((az % 360) + 360) % 360) / 360 * 256,
-  Math.max(10 - TOP, el <= 20 ? 28 - el * 0.3 : 22 - (el - 20) * 0.6)];
+export const skyXY = (az, el) => SQUARE
+  ? [(((az % 360) + 360) % 360) / 360 * W, Math.max(24, ry(el <= 20 ? 28 - el * 0.3 : 22 - (el - 20) * 0.6))]
+  : [(((az % 360) + 360) % 360) / 360 * 256, Math.max(10 - TOP, el <= 20 ? 28 - el * 0.3 : 22 - (el - 20) * 0.6)];
 
 // Days since 1970-01-01 for a calendar date, for comparing dates.
 export const dayNumber = (y, m, d) => Math.round(Date.UTC(y, m - 1, d) / 86400000);

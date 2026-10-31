@@ -1,7 +1,7 @@
 // Hood River from the Washington shore: the live scene, drawn every frame.
 // A port of the board's renderer (led-matrix tools/gorge.py + town.py); the static layout comes from
 // assets/scene.json, exported from the Python so both show exactly the same town.
-import { W, H, HORIZON, TOP, FULL_H, rgb, blend, line, text, gradient, clamp, decodeB64, setTarget } from "./pix.js";
+import { W, H, HORIZON, TOP, FULL_H, SQUARE, SX, KW, rx, ry, rgb, blend, line, text, gradient, clamp, decodeB64, setTarget } from "./pix.js";
 import { Rng } from "./rng.js";
 import { skyState, phaseWeights, mixp, PHASES, SKY, MOUNTAIN, DEEP_WATER, SUN_GLOW, SUN_DISC, localParts, MONTHS } from "./sky.js";
 import { WeatherFX } from "./weather.js";
@@ -22,7 +22,7 @@ const SNOW_TAKE = { [FAR_EAST]: 0.7, [FAR_WEST]: 0.45, [ORCHARD]: 0.85, [ORCHARD
 const HAZY = { [FAR_EAST]: 0.28, [FAR_WEST]: 0.25, [ORCHARD]: 0.12, [ORCHARD_ROW]: 0.12 };
 export const MAT = { FAR_EAST, FAR_WEST, ORCHARD, ORCHARD_ROW, BLUFF, TREE, ROOF, SAND };
 
-const SHORE_L = 84, SHORE_R = 232;
+const SHORE_L = Math.round(rx(84)), SHORE_R = Math.round(rx(232));
 const ROW_TOWN_BASE = HORIZON - 5, ROW_RAIL = HORIZON - 4, ROW_FREEWAY = HORIZON - 2, ROW_SHORE = HORIZON - 1;
 
 // A day colour relit for the time of day: warm at golden hour, violet at blue hour, near-black at night.
@@ -35,7 +35,9 @@ const sc3 = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 
 // The website's taller sky: each time-of-day gradient continues up past the board's top row to a deeper zenith.
 const ZENITH = { night: [1, 2, 7], twi: [6, 6, 26], gold: [8, 5, 28], day: [22, 70, 168] };
-const SKY_TALL = TOP ? Object.fromEntries(PHASES.map(p => [p, [[0, ZENITH[p]], ...SKY[p].map(([y, c]) => [y + TOP, c])]])) : SKY;
+// The square board's sky: the board's gradient stretched over its taller sky, under a deeper zenith.
+const SKY_TALL = SQUARE ? Object.fromEntries(PHASES.map(p => [p, [[0, ZENITH[p]], ...SKY[p].map(([y, c]) => [ry(y), c])]]))
+  : TOP ? Object.fromEntries(PHASES.map(p => [p, [[0, ZENITH[p]], ...SKY[p].map(([y, c]) => [y + TOP, c])]])) : SKY;
 
 // ---------------------------------------------------------------- riders
 
@@ -46,7 +48,7 @@ class Sailor {
   constructor(rng, kite = false) { this.rng = rng; this.kite = kite; this.reset(true); }
   reset(first = false) {
     const r = this.rng;
-    this.y = r.uniform(40, 61);
+    this.y = r.uniform(ry(40), ry(61));
     this.dir = r.choice([-1, 1]);
     this.speed = r.uniform(16, 30);
     this.x = first ? r.uniform(0, W) : (this.dir > 0 ? -10 : W + 10);
@@ -56,7 +58,7 @@ class Sailor {
     this.phase = r.uniform(0, 6.28);
     this.trail = [];
   }
-  get scale() { return 0.55 + (this.y - 40) / 21 * 0.9; }
+  get scale() { return (0.55 + (this.y - ry(40)) / (ry(61) - ry(40)) * 0.9) * (SQUARE ? 1.3 : 1); }
 }
 
 // ---------------------------------------------------------------- the scene
@@ -72,8 +74,20 @@ export class Scene {
   static PEAK_X = 150;
   static RAIL_ROW = HORIZON - 4; static RAIL_SPAN = [0, 232];
   static PERCH = [160, HORIZON];
+  static VK = 1; // heights of the bridge's details, in near-plane pixels per board pixel
+
+  // The square board: the same bridge from the same spot, at half the width and half again as tall, so the
+  // lift towers rise past the far ridges toward Mt. Hood.
+  static squareGeometry() {
+    Object.assign(Scene, {
+      VP: [rx(100), ry(33.3)], NEAR_DECK: [rx(100) - 57, ry(33.3) - 9.5], VK: 1.5,
+      TOWER_H: 38, TOWER_W: 5, DECK_TRUSS: 8, WATER: 63,
+      PEAK_X: 75, RAIL_ROW: HORIZON - 4, RAIL_SPAN: [0, Math.round(rx(232))], PERCH: [Math.round(rx(160)), HORIZON],
+    });
+  }
 
   constructor(data, { eggClasses = [], eggRate = 1, log = console.log, labels = null } = {}) {
+    if (SQUARE) Scene.squareGeometry();
     const n = W * HORIZON;
     this.land = decodeB64(data.land, Uint8Array).slice(0, n);
     this.mtnMat = decodeB64(data.mtn_mat, Uint8Array).slice(0, n);
@@ -94,8 +108,8 @@ export class Scene {
     if (TOP) for (let k = 0; k < 90; k++) this.stars.push([sr.integers(W), sr.integers(-TOP, 0), sr.uniform(0, 6.28), sr.uniform(0.8, 2.5)]);
     this.sailors = Array.from({ length: 10 }, () => new Sailor(rng));
     this.kiters = Array.from({ length: 3 }, () => new Sailor(rng, true));
-    this.streaks = Array.from({ length: 40 }, () => [rng.uniform(0, W), rng.uniform(4 - TOP, 63), rng.uniform(5, 14), rng.uniform(0.7, 1.4)]);
-    this.birds = Array.from({ length: 3 }, () => [rng.uniform(-60, W), rng.uniform(8, 20), rng.uniform(5, 9)]);
+    this.streaks = Array.from({ length: 40 }, () => [rng.uniform(0, W), rng.uniform(SQUARE ? ry(4) : 4 - TOP, ry(63)), rng.uniform(5, 14), rng.uniform(0.7, 1.4)]);
+    this.birds = Array.from({ length: 3 }, () => [rng.uniform(-60, W), rng.uniform(ry(8), ry(20)), rng.uniform(5, 9)]);
     this.eggs = new Eggs(eggClasses, new Rng((Date.now() & 0xffffffff) >>> 0), eggRate, log);
     this.solid = new Uint8Array(W * H);
     for (let i = 0; i < n; i++) this.solid[i] = this.land[i] > 0 ? 1 : 0;
@@ -107,6 +121,7 @@ export class Scene {
   // board exactly; higher up it climbs into the website's extra sky.
   static arc(haDeg, elev) {
     const y = elev <= 10 ? 26 - elev * 0.5 : 21 - (elev - 10) * 0.8;
+    if (SQUARE) return [W / 2 + haDeg / 115 * 130 * SX, Math.max(5, ry(y))];
     return [128 + haDeg / 115 * 130, Math.max(5 - TOP, y)];
   }
   arc(haDeg, elev) { return Scene.arc(haDeg, elev); }
@@ -145,7 +160,7 @@ export class Scene {
     for (let y = 0; y < HORIZON + TOP; y++) for (let x = 0; x < W; x++) full.set(skyAll[y], (y * W + x) * 3);
     if (night > 0.02) {
       for (const [x, y, ph, sp] of this.stars) {
-        blend(img, x, y, rgb(255, 245, 230), night * (1 - veil) * (1 - (y + TOP) / (17 + TOP)) * (0.5 + 0.35 * Math.sin(t * sp + ph)));
+        blend(img, x, y, rgb(255, 245, 230), night * (1 - veil) * (SQUARE ? 1 - y / ry(18) : 1 - (y + TOP) / (17 + TOP)) * (0.5 + 0.35 * Math.sin(t * sp + ph)));
       }
     }
 
@@ -197,7 +212,7 @@ export class Scene {
     // --- birds (daytime)
     for (const b of this.birds) {
       b[0] += b[2] * dt;
-      if (b[0] > W + 20) { b[0] = -rng.uniform(20, 120); b[1] = rng.uniform(8, 20); }
+      if (b[0] > W + 20) { b[0] = -rng.uniform(20, 120); b[1] = rng.uniform(ry(8), ry(20)); }
       if (light > 0.1) {
         const flap = Math.trunc(t * 4 + b[1]) % 2;
         const c = w.day < 0.5 ? rgb(30, 15, 40) : rgb(40, 45, 60);
@@ -269,7 +284,7 @@ export class Scene {
     }
 
     // --- tug pushing barges upriver (leftward), lit after dark
-    const bx = this.bargeX(t), by = 39;
+    const bx = this.bargeX(t), by = Math.round(ry(39));
     const bargeC = sc3(rgb(55, 45, 40), dim), tugC = sc3(rgb(200, 60, 45), dim);
     for (let i = 0; i < 3; i++) {
       const x0 = Math.trunc(bx + i * 14);
@@ -289,7 +304,7 @@ export class Scene {
     const streakA = 0.18 * (0.35 + 0.65 * (1 - night));
     for (const s of this.streaks.slice(0, Math.trunc(10 + 20 * wf))) {
       s[0] += (40 + 60 * wf) * s[3] * dt;
-      if (s[0] > W + 15) { s[0] = -rng.uniform(0, 40); s[1] = rng.uniform(4, 63); }
+      if (s[0] > W + 15) { s[0] = -rng.uniform(0, 40); s[1] = rng.uniform(ry(4), ry(63)); }
       for (let i = 0; i < Math.trunc(s[2]); i++) blend(img, s[0] - i, s[1], [1, 1, 1], streakA * (1 - i / s[2]));
     }
 
@@ -331,6 +346,7 @@ export class Scene {
     const h12 = now.hour % 12 || 12;
     const clock = `${h12}:${String(now.minute).padStart(2, "0")} ${now.hour < 12 ? "AM" : "PM"}`;
     const date = `${now.weekdayName} ${MONTHS[now.month - 1]} ${now.day}`;
+    if (SQUARE) { this.squareCaptions(full, clock, date, wind, wx, mph, nowMs, t); this.eggs.draw("over", full, egg); return full; }
     let x = text(full, 3, 2, clock, [1, 1, 1], 0.95);
     x = text(full, x + 5, 2, date, rgb(215, 215, 235), 0.8);
     if (wind.live && !wind.demo) { // live temperature ("*" is the degree sign)
@@ -354,6 +370,30 @@ export class Scene {
     return full;
   }
 
+  // The square board's captions: clock and temperature, then the date and the wind, then the line for the day.
+  squareCaptions(full, clock, date, wind, wx, mph, nowMs, t) {
+    const right = (y, s, col, a) => text(full, W - 3 - s.length * 4 + 1, y, s, col, a);
+    text(full, 3, 2, clock, [1, 1, 1], 0.95);
+    const word = wx.label || WeatherFX.caption(wx);
+    let top = word || "";
+    if (wind.live && !wind.demo) { // live temperature ("*" is the degree sign)
+      const f = clamp((wind.temp - 30) / 60, 0, 1);
+      const tint = [0, 1, 2].map(k => rgb(170, 205, 255)[k] * (1 - f) + rgb(255, 205, 150)[k] * f);
+      const deg = `${Math.round(wind.temp)}*F`;
+      right(2, deg, tint, 0.95);
+      top = top ? `${top} ` : "";
+      if (top) right(2, top + " ".repeat(deg.length), [1, 1, 1], 0.85);
+    } else if (top) right(2, top, [1, 1, 1], 0.85);
+    text(full, 3, 9, date, rgb(215, 215, 235), 0.8);
+    const cap = (wx.label || wind.demo ? "DEMO " : "") + `WIND ${Math.round(mph)}` + (wind.demo ? "" : ` ${wind.compass()}`);
+    right(9, cap, [1, 1, 1], wind.live ? 0.9 : 0.45);
+    const days = this.labels ? this.labels(nowMs) : [];
+    if (days.length) {
+      const [label, col] = days[Math.trunc(t / 6) % days.length];
+      text(full, 3, 16, label, rgb(...col), 0.9);
+    }
+  }
+
   // ---------------------------------------------------------------- land
 
   drawLand(img, t, w, sky, night, dim) {
@@ -374,7 +414,7 @@ export class Scene {
     }
     // the Hood River's mouth reads as a notch of water in the shoreline
     const mouth = sky[HORIZON - 3].map((v, k) => v * 0.5 + [0.02, 0.06, 0.12][k]);
-    for (let x = 134; x < 137; x++) img.set(mouth, (ROW_SHORE * W + x) * 3);
+    for (let x = Math.round(rx(134)); x < Math.round(rx(137)); x++) img.set(mouth, (ROW_SHORE * W + x) * 3);
 
     for (const x of this.masts) { // marina masts, with anchor lights at night
       for (const y of [ROW_SHORE - 3, ROW_SHORE - 2, ROW_SHORE - 1]) blend(img, x, y, shade([235, 235, 235], w), 1);
@@ -387,7 +427,7 @@ export class Scene {
           img[i] = img[i] * 0.15 + 0.85; img[i + 1] = img[i + 1] * 0.15 + 0.8 * 0.85; img[i + 2] = img[i + 2] * 0.15 + 0.45 * 0.85;
         }
       }
-      for (let x = SHORE_L + 4; x < SHORE_R; x += 9) blend(img, x, ROW_SHORE, [1, 0.92, 0.7], night * 0.7);
+      for (let x = SHORE_L + 4; x < SHORE_R; x += SQUARE ? 5 : 9) blend(img, x, ROW_SHORE, [1, 0.92, 0.7], night * 0.7);
     }
     this.drawTrain(img, t, night, dim, ROW_RAIL, 0, SHORE_R);
 
@@ -428,11 +468,12 @@ export class Scene {
     let sand = shade(DAY[SAND], w);
     const ground = this.groundSnow;
     if (ground > 0) sand = sand.map((v, k) => v * (1 - 0.9 * ground) + shade([236, 240, 248], w)[k] * 0.9 * ground);
-    for (let x = 138; x < 178; x++) { // sandbar spit reaching into the Columbia from the river mouth
-      const depth = 2.6 * Math.sin(Math.PI * (x - 138) / 40) ** 0.7;
+    const s0 = Math.round(rx(138)), s1 = Math.round(rx(178));
+    for (let x = s0; x < s1; x++) { // sandbar spit reaching into the Columbia from the river mouth
+      const depth = 2.6 * (SQUARE ? 0.8 : 1) * Math.sin(Math.PI * (x - s0) / (s1 - s0)) ** 0.7;
       for (let y = HORIZON; y <= HORIZON + Math.round(depth); y++) blend(img, x, y, sc3(sand, 1 - 0.12 * (y - HORIZON)), 1);
     }
-    for (let i = 0; i < 10; i++) blend(img, 96 + i, HORIZON + Math.sin(i / 9 * Math.PI) * 1.6, shade(DAY[ROCKS], w), 1); // the Hook
+    for (let i = 0; i < 10; i++) blend(img, rx(96 + i), HORIZON + Math.sin(i / 9 * Math.PI) * 1.6 * KW, shade(DAY[ROCKS], w), 1); // the Hook
   }
 
   project(z, up = 0, dx = 0) {
@@ -449,8 +490,8 @@ export class Scene {
   pier(img, z, width, concrete, twin, stepped = false) {
     const [x, yTop, k] = this.project(z, -Scene.DECK_TRUSS);
     let [, yBot] = this.project(z, -Scene.WATER);
-    const half = Math.max(0.6, width * k / 2);
-    yBot = Math.min(yBot, 70);
+    const half = Math.max(0.6, width * (SQUARE ? 0.55 : 1) * k / 2);
+    yBot = Math.min(yBot, H + 6);
     for (let xx = Math.round(x - half); xx <= Math.round(x + half); xx++) {
       const f = (xx - (x - half)) / Math.max(1, 2 * half);
       let col = sc3(concrete, 1 - 0.3 * f); // lit from the left, shaded right
@@ -481,17 +522,18 @@ export class Scene {
     const th = Scene.TOWER_H, tw = Scene.TOWER_W;
     for (const side of [-tw / 2, tw / 2]) this.member(img, z, -Scene.DECK_TRUSS, z, th, steel, side, side);
     let up = 0;
-    while (up < th - 3) { // X-bracing up the tower
-      const u1 = Math.min(th - 3, up + tw * 1.1);
+    const vk = Scene.VK;
+    while (up < th - 3 * vk) { // X-bracing up the tower
+      const u1 = Math.min(th - 3 * vk, up + tw * 1.1 * vk);
       this.member(img, z, up, z, u1, sc3(steel, 0.85), -tw / 2, tw / 2);
       this.member(img, z, u1, z, up, sc3(steel, 0.85), -tw / 2, tw / 2);
       this.member(img, z, u1, z, u1, steel, -tw / 2, tw / 2);
       up = u1;
     }
-    const [x0, y0] = this.project(z, th + 3, -tw / 2 - 1), [x1, y1] = this.project(z, th - 1, tw / 2 + 1);
+    const [x0, y0] = this.project(z, th + 3 * vk, -tw / 2 - 1), [x1, y1] = this.project(z, th - vk, tw / 2 + 1);
     for (let yy = Math.round(y0); yy <= Math.round(y1); yy++) for (let xx = Math.round(x0); xx <= Math.round(x1); xx++) blend(img, xx, yy, house, 1);
     if (night > 0.2 && Math.trunc(t * 1.5 + z * 3) % 2) {
-      const [x, y] = this.project(z, th + 5);
+      const [x, y] = this.project(z, th + 5 * vk);
       blend(img, x, y, [1, 0.15, 0.1], night);
     }
   }
@@ -520,9 +562,10 @@ export class Scene {
 
     // lift span: a through-truss with a curved top chord between the towers; raised for tall ships
     const n = 7;
-    const raise = this.liftRaise * (Scene.TOWER_H - 13);
+    const vk = Scene.VK;
+    const raise = this.liftRaise * (Scene.TOWER_H - 13 * vk);
     this.liftRaise = Math.max(0, this.liftRaise - 0.02); // sinks back unless a ship holds it
-    const tops = Array.from({ length: n + 1 }, (_, i) => [zA + (zB - zA) * i / n, raise + 5 + 7 * Math.sin(Math.PI * i / n)]);
+    const tops = Array.from({ length: n + 1 }, (_, i) => [zA + (zB - zA) * i / n, raise + (5 + 7 * Math.sin(Math.PI * i / n)) * vk]);
     for (let i = 0; i < n; i++) {
       const [za, ua] = tops[i], [zb, ub] = tops[i + 1];
       add((za + zb) / 2, img => {
@@ -534,10 +577,10 @@ export class Scene {
       });
     }
     add((zA + zB) / 2 - 0.01, img => { // cables draped between the tower tops
-      for (const [sag, alpha] of [[5.0, 0.55], [8.5, 0.4]]) {
+      for (const [sag, alpha] of [[5.0 * vk, 0.55], [8.5 * vk, 0.4]]) {
         const pts = Array.from({ length: 12 }, (_, j) => {
           const u = j / 11;
-          return this.project(zA + (zB - zA) * u, Scene.TOWER_H + 1 - sag * Math.sin(Math.PI * u));
+          return this.project(zA + (zB - zA) * u, Scene.TOWER_H + vk - sag * Math.sin(Math.PI * u));
         });
         for (let j = 0; j < 11; j++) line(img, pts[j][0], pts[j][1], pts[j + 1][0], pts[j + 1][1], cable, alpha);
       }
@@ -548,7 +591,7 @@ export class Scene {
         const zz = z;
         add(zz - 0.005, img => {
           const [x, y, k] = this.project(zz, -Scene.DECK_TRUSS);
-          const length = Math.max(1, Math.round(3.5 * k));
+          const length = Math.max(1, Math.round(3.5 * vk * k));
           for (let i = 0; i < length; i++) blend(img, x, y + 1 + i, [0.8, 0.92, 1.0], 0.9 * (1 - i / (length + 1)));
         });
       }
@@ -556,7 +599,7 @@ export class Scene {
     for (let z = Scene.Z_NEAR + 0.2; z < Scene.Z_FAR; z *= 1.35) { // lamp posts along the deck, lit after dark
       const zz = z;
       add(zz - 0.005, img => {
-        const [x, y] = this.project(zz, 0), [, yl] = this.project(zz, 4);
+        const [x, y] = this.project(zz, 0), [, yl] = this.project(zz, 4 * vk);
         line(img, x, y, x, yl, sc3(steel, 0.9), 1);
         if (night > 0.25) blend(img, x, yl, [1, 0.9, 0.65], night * 0.9);
       });
@@ -565,7 +608,7 @@ export class Scene {
       const z = 1.0 + ((((ph + t * 0.04 * (k % 2 ? 1 : -1)) % 1) + 1) % 1) * (Scene.Z_FAR - 1.0);
       if (raise > 0.3 && z > zA - 0.1 && z < zB + 0.1) return; // traffic waits while the span is up
       add(z - 0.005, img => {
-        const [x, y, s] = this.project(z, 1.2);
+        const [x, y, s] = this.project(z, 1.2 * vk);
         const size = Math.max(1, Math.round(3 * s));
         if (night > 0.3) {
           const col = k % 2 ? [1, 0.95, 0.75] : [1, 0.2, 0.15];

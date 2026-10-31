@@ -1,6 +1,6 @@
 // Easter eggs, batch 3 (the board's eggs_more2.py): rider mishaps, seasons and Gorge life, legends,
 // the real sky, holidays.
-import { W, H, HORIZON, TOP, rgb, blend, text, scale as mul } from "./pix.js";
+import { W, H, HORIZON, TOP, SQUARE, SX, KS, rx, ry, wdepth, rgb, blend, text, scale as mul } from "./pix.js";
 import { Egg, smoothFade, sprite, splash, glow, landTop, skyXY, dayNumber } from "./eggs.js";
 import { Rng } from "./rng.js";
 import { MAT } from "./scene.js";
@@ -94,11 +94,11 @@ export class Bats extends Egg {
   static egg = "bats";
   layer = "shore"; duration = 24; perHour = 2;
   allowed(c) { return c.now.month >= 5 && c.now.month <= 9 && c.now.hour >= 12 && c.w.twi > 0.3 ? 1 : 0; }
-  begin(c) { this.bats = Array.from({ length: 16 }, () => [c.rng.uniform(40, 220), c.rng.uniform(11, 20), c.rng.uniform(0, 6.3), c.rng.uniform(0.7, 1.4)]); return true; }
+  begin(c) { this.bats = Array.from({ length: 16 }, () => [c.rng.uniform(rx(40), rx(220)), c.rng.uniform(ry(11), ry(20)), c.rng.uniform(0, 6.3), c.rng.uniform(0.7, 1.4)]); return true; }
   draw(img, c, age) {
     const fade = smoothFade(age, this.duration, 3), col = rgb(18, 14, 20);
     for (const [x0, y0, ph, sp] of this.bats) { // erratic darting paths
-      const x = x0 + 30 * Math.sin(age * 0.5 * sp + ph) + 8 * Math.sin(age * 3.1 * sp + ph * 2);
+      const x = x0 + (SQUARE ? 18 : 30) * Math.sin(age * 0.5 * sp + ph) + 8 * Math.sin(age * 3.1 * sp + ph * 2);
       const y = y0 + 4 * Math.sin(age * 0.9 * sp + ph * 1.7) + 2 * Math.sin(age * 5 + ph);
       const flap = Math.trunc(age * 12 * sp + ph) % 2;
       blend(img, x, y, col, fade); blend(img, x - 1, y - flap, col, fade); blend(img, x + 1, y - flap, col, fade);
@@ -112,9 +112,9 @@ export class Elk extends Egg {
   allowed(c) { return c.light + 0.6 * c.w.twi; }
   begin(c) {
     this.ground = {};
-    for (let x = 180; x < 232; x++) { const g = landTop(c.scene, x, [MAT.ORCHARD, MAT.ORCHARD_ROW]); if (g !== null) this.ground[x] = g; }
+    for (let x = Math.round(rx(180)); x < Math.round(rx(232)); x++) { const g = landTop(c.scene, x, [MAT.ORCHARD, MAT.ORCHARD_ROW]); if (g !== null) this.ground[x] = g; }
     if (!Object.keys(this.ground).length) return false;
-    this.herd = [0, 1, 2, 3, 4].map(i => [c.rng.uniform(186, 205) + i * 5, i === 0, c.rng.uniform(0, 6.3)]);
+    this.herd = [0, 1, 2, 3, 4].map(i => [c.rng.uniform(rx(186), rx(205)) + i * 5, i === 0, c.rng.uniform(0, 6.3)]);
     return true;
   }
   draw(img, c, age) {
@@ -139,13 +139,13 @@ export class SalmonRun extends Egg {
   static egg = "salmonrun";
   layer = "water"; duration = 10; perHour = 1;
   allowed(c) { return c.now.month === 8 || c.now.month === 9 ? c.light + 0.4 * c.w.twi : 0; }
-  begin(c) { const r = c.rng; this.leaps = Array.from({ length: 30 }, () => [r.uniform(0, 8.5), r.uniform(15, W - 15), r.uniform(46, 62), r.choice([-1, 1])]); return true; }
+  begin(c) { const r = c.rng; this.leaps = Array.from({ length: 30 }, () => [r.uniform(0, 8.5), r.uniform(15, W - 15), r.uniform(ry(46), ry(62)), r.choice([-1, 1])]); return true; }
   draw(img, c, age) {
     const lum = 0.55 + 0.45 * c.light;
     for (const [t0, x0, y0, d] of this.leaps) {
       const p = age - t0;
       if (p < 0 || p > 1.3) continue;
-      const sc = 0.9 + (y0 - 40) / 21 * 0.9;
+      const sc = 0.9 + wdepth(y0) * 0.9;
       if (p <= 1) { // an arcing fish, silver back and a red flank
         const x = x0 + d * p * 10 * sc, y = y0 - Math.sin(Math.PI * p) * 9 * sc;
         const ang = Math.atan2(-Math.cos(Math.PI * p) * 9 * Math.PI * sc, d * 10 * sc), n = Math.round(2.5 * sc);
@@ -167,7 +167,7 @@ export class ColossalClaude extends Egg {
   static egg = "claude";
   layer = "water"; duration = 26; perHour = 0.04;
   allowed(c) { return c.light + 0.5 * c.w.twi; }
-  begin(c) { this.row = c.rng.uniform(53, 58); this.dir = c.rng.choice([-1, 1]); return true; }
+  begin(c) { this.row = c.rng.uniform(ry(53), ry(58)); this.dir = c.rng.choice([-1, 1]); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const lum = 0.55 + 0.45 * c.light;
@@ -201,14 +201,14 @@ export class ColossalClaude extends Egg {
 export class Kraken extends Egg {
   static egg = "kraken";
   layer = "water"; duration = 9; perHour = 0.02;
-  begin(c) { const bx = c.scene.bargeX(c.t); return bx > 10 && bx < W - 70; }
-  depthRow() { return 39.5; }
+  begin(c) { const bx = c.scene.bargeX(c.t); return bx > 10 && bx < W - (SQUARE ? 50 : 70); }
+  depthRow() { return Math.round(ry(39)) + 0.5; }
   draw(img, c, age) {
     const bx = c.scene.bargeX(c.t);
     const rise = age < 6.5 ? Math.min(1, age / 2) : Math.max(0, 1 - (age - 6.5) / 2.5);
     const lum = 0.5 + 0.5 * c.light, skin = mul(rgb(150, 50, 80), lum), sucker = mul(rgb(235, 170, 185), lum);
     [-4, 8, 20, 32, 44].forEach((off, k) => {
-      const baseX = bx + off, baseY = 40.5, length = 12 * rise * (0.8 + 0.3 * (k % 2));
+      const baseX = bx + off, baseY = Math.round(ry(39)) + 1.5, length = 12 * rise * (0.8 + 0.3 * (k % 2));
       let prev = null;
       for (let i = 0; i < Math.trunc(length * 2); i++) {
         const u = i / (length * 2), x = baseX + Math.sin(u * 3 + age * 2 + k) * 3 * u, y = baseY - u * length;
@@ -219,7 +219,7 @@ export class Kraken extends Egg {
       }
       if (prev && rise > 0.8) blend(img, prev[0] + 1, prev[1] + 1, skin, 1); // the curling tip
     });
-    if (age < 1.2) splash(img, bx + 20, 40, age / 1.2, 1.2);
+    if (age < 1.2) splash(img, bx + 20, Math.round(ry(39)) + 1, age / 1.2, 1.2);
   }
 }
 
@@ -227,8 +227,8 @@ export class RubberDucks extends Egg {
   static egg = "ducks";
   layer = "water"; duration = 30; perHour = 0.15;
   allowed(c) { return c.light; }
-  begin(c) { const r = c.rng; this.ducks = Array.from({ length: 30 }, () => [r.uniform(-60, 0), r.uniform(43, 60), r.uniform(0, 6.3), r.uniform(0.8, 1.2)]); return true; }
-  depthRow() { return 50; }
+  begin(c) { const r = c.rng; this.ducks = Array.from({ length: 30 }, () => [r.uniform(-60, 0), r.uniform(ry(43), ry(60)), r.uniform(0, 6.3), r.uniform(0.8, 1.2)]); return true; }
+  depthRow() { return ry(50); }
   draw(img, c, age) {
     const yellow = mul(rgb(255, 215, 40), 0.5 + 0.5 * c.light), beak = rgb(255, 120, 30);
     for (const [x0, y0, ph, sp] of this.ducks) {
@@ -242,7 +242,7 @@ export class Bottle extends Egg {
   static egg = "bottle";
   layer = "water"; duration = 30; perHour = 0.15;
   allowed(c) { return c.light + 0.4 * c.w.twi; }
-  begin(c) { this.row = c.rng.uniform(55, 60); return true; }
+  begin(c) { this.row = c.rng.uniform(ry(55), ry(60)); return true; }
   depthRow() { return this.row; }
   draw(img, c, age) {
     const x = -8 + age * (W + 16) / this.duration, y = this.row + Math.sin(age * 2.3) * 0.7, tilt = Math.sin(age * 1.7) * 0.6;
@@ -328,7 +328,7 @@ export class LunarEclipse extends Egg {
       if (!cur) { this.done = true; return; }
       [frac] = cur; gamma = cur[1].gamma; total = cur[1].kind === "total";
     }
-    const [mx, my] = c.melev > 0 ? [c.mx, c.my] : [60, 12];
+    const [mx, my] = c.melev > 0 ? [c.mx, c.my] : [rx(60), ry(12)];
     const r = 3.8, shadowR = 7.5, sx = mx - frac * (r + shadowR), sy = my + gamma * 3; // the umbra slides across
     const copper = total ? rgb(170, 70, 40) : rgb(120, 60, 50);
     for (let yy = -4; yy <= 4; yy++) for (let xx = -4; xx <= 4; xx++) {
@@ -386,7 +386,7 @@ export class StPatrick extends Egg {
 export class Easter extends Egg {
   static egg = "easter";
   static PASTELS = [[255, 170, 200], [170, 220, 255], [255, 240, 150], [190, 255, 190], [220, 190, 255]];
-  static X0 = 100; static X1 = 232; // from the Hook to the bluff
+  static X0 = rx(100); static X1 = rx(232); // from the Hook to the bluff
   layer = "top"; duration = 20; perHour = 3; exclusive = false;
   allowed(c) { return sameDay(c.now, easter(c.now.year)) ? c.light : 0; }
   draw(img, c, age) {
@@ -407,7 +407,7 @@ export class Easter extends Egg {
 
 export class Thanksgiving extends Egg {
   static egg = "thanksgiving";
-  static X0 = 228; static X1 = 100;
+  static X0 = rx(228); static X1 = rx(100);
   layer = "top"; duration = 22; perHour = 3; exclusive = false;
   allowed(c) { return sameDay(c.now, thanksgiving(c.now.year)) ? c.light : 0; }
   draw(img, c, age) {
@@ -445,7 +445,7 @@ export class Birthday extends Egg {
     const x = W - age * 22, colors = [[255, 80, 80], [255, 200, 60], [90, 230, 120], [90, 170, 255], [220, 120, 255]];
     [...this.msg].forEach((ch, i) => {
       const cx = Math.trunc(x) + i * 4;
-      if (cx > -4 && cx < W) text(img, cx, 11 + Math.trunc(Math.sin(age * 4 + i * 0.6) * 1.5), ch, rgb(...colors[i % 5]), 1);
+      if (cx > -4 && cx < W) text(img, cx, (SQUARE ? 26 : 11) + Math.trunc(Math.sin(age * 4 + i * 0.6) * 1.5), ch, rgb(...colors[i % 5]), 1);
     });
   }
 }
@@ -458,9 +458,9 @@ export class Wish extends Egg {
     const h = c.now.hour % 12 || 12, m = c.now.minute;
     return ((h === 11 && m === 11) || (h === 12 && m === 34)) && fresh(this, this.key(c)) ? 1 : 0;
   }
-  begin(c) { this.lastKey = this.key(c); this.x = c.rng.uniform(30, 120); this.y = c.rng.uniform(9 - TOP * 0.6, 12 - TOP * 0.3); return true; }
+  begin(c) { this.lastKey = this.key(c); this.x = c.rng.uniform(rx(30), rx(120)); this.y = c.rng.uniform(ry(9 - TOP * 0.6), ry(12 - TOP * 0.3)); return true; }
   draw(img, c, age) {
-    const hx = this.x + age * 90, hy = this.y + age * 9, fade = Math.min(1, (this.duration - age) / 0.3);
+    const hx = this.x + age * 90 * SX, hy = this.y + age * 9 * KS, fade = Math.min(1, (this.duration - age) / 0.3);
     glow(img, hx, hy, 3, rgb(255, 250, 220), 0.5 * fade);
     for (let i = 0; i < 22; i++) blend(img, hx - i * 1.5, hy - i * 0.3, rgb(255, 250, 225), (1 - i / 22) * fade);
   }

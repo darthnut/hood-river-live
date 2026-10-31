@@ -4,11 +4,40 @@
 // the eggs keep drawing in the board's coordinates on a "view" of the bottom 64 rows, so everything
 // calibrated on the board stays put, and the helpers here let negative rows reach up into the extra sky.
 
-export const W = 256, H = 64, HORIZON = 36;
+// The square board (four 64x64 panels as 2x2, 128x128) sets globalThis.GORGE_GEOM = { square: true } before
+// loading the scene; see rx/ry below.
+const SQ = globalThis.GORGE_GEOM?.square === true;
+export const SQUARE = SQ;
+export const W = SQ ? 128 : 256, H = SQ ? 128 : 64, HORIZON = SQ ? 84 : 36;
 // Extra sky rows on the website. The LED board runner (tools/board.mjs) sets globalThis.GORGE_TOP = 0 before
 // loading the scene, so the same code draws the board's own 256x64 frame.
-export const TOP = globalThis.GORGE_TOP ?? 32;
+export const TOP = SQ ? 0 : globalThis.GORGE_TOP ?? 32;
 export const FULL_H = H + TOP;   // the website's frame height
+
+// Positions written for the 256x64 board, mapped into this frame (identity except on the square board).
+// Across: halved. Down: the five rows above the horizon (shore, freeway, rail) stay 1:1, the sky above them
+// stretches to fill the square's tall sky (old row 0 lands on row 12), and the river's 28 rows become 44.
+export const SX = W / 256;                       // horizontal scale, also for speeds in px/s
+export const KS = SQ ? (HORIZON - 5 - 12) / 31 : 1; // sky stretch
+export const KW = SQ ? (H - HORIZON) / 28 : 1;      // river stretch
+export const rx = x => x * SX;
+export function ry(y) {
+  if (!SQ) return y;
+  const d = 36 - y;
+  if (d <= 0) return HORIZON - d * KW;
+  if (d <= 5) return HORIZON - d;
+  return HORIZON - 5 - (d - 5) * KS;
+}
+// How far down the river a row is, 0 at the board's row 40 .. 1 at row 61 (riders' and eggs' size scale).
+export const wdepth = y => (y - ry(40)) / (ry(61) - ry(40));
+
+// ry's inverse: a row of this frame in the 256x64 board's coordinates
+export function unry(y) {
+  if (!SQ) return y;
+  if (y >= HORIZON) return 36 + (y - HORIZON) / KW;
+  if (y >= HORIZON - 5) return 36 - (HORIZON - y);
+  return 31 - (HORIZON - 5 - y) / KS;
+}
 
 export const rgb = (r, g, b) => [r / 255, g / 255, b / 255];
 export const scale = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
