@@ -14,8 +14,10 @@
 //   weather.trigger  a weather preset, or "live"
 //   mode.trigger     "photos" plays the photo album instead of the scene, "live" goes back to the scene
 //                    (remembered in the file "mode", so it survives a restart)
-//   photos/*.rgb     the album: clips of raw WxH RGB frames at the board's frame rate, played in name order
-//                    (made by the private led-matrix repo's tools/photo_album.py; never part of the website)
+//   photos/*.rgb     the album: clips of raw WxH RGB frames at the board's frame rate, played in name order,
+//                    or at random while photos/shuffle exists (made by the private led-matrix repo's photo
+//                    gallery, pi/gallery; never part of the website)
+//   photo.trigger    a clip's file name: play it now, then carry on from there
 // Each trigger file is read and deleted within a second.
 import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -116,12 +118,17 @@ function readTrigger(name) {
 let mode = "live";
 try { mode = readFileSync(join(args.dir, "mode"), "utf8").trim() === "photos" ? "photos" : "live"; } catch { /* live */ }
 const BLACK = new Uint8Array(W * H * 3);
-const album = { i: -1, clip: null, f: 0, loading: false, ready: null, gen: 0 };
+const album = { i: -1, clip: null, f: 0, loading: false, ready: null, gen: 0, want: null };
 function albumLoad() { // read the next clip in the background; album.ready gets it (null if there is none)
   let files = [];
   try { files = readdirSync(join(args.dir, "photos")).filter(f => f.endsWith(".rgb")).sort(); } catch { /* none */ }
   if (!files.length) { album.ready = { b: null }; return; }
-  album.i = (album.i + 1) % files.length;
+  const want = album.want ? files.indexOf(album.want) : -1;
+  album.want = null;
+  if (want >= 0) album.i = want;
+  else if (files.length > 1 && existsSync(join(args.dir, "photos", "shuffle"))) {
+    album.i = (album.i + 1 + Math.floor(Math.random() * (files.length - 1))) % files.length; // never the same twice
+  } else album.i = (album.i + 1) % files.length;
   album.loading = true;
   const gen = album.gen;
   readFile(join(args.dir, "photos", files[album.i])).then(b => b, () => null).then(b => {
@@ -161,10 +168,12 @@ setInterval(() => {
   }
   const md = readTrigger("mode.trigger");
   if (md && (md[0] === "photos" || md[0] === "live")) {
-    mode = md[0]; Object.assign(album, { clip: null, loading: false, ready: null, gen: (album.gen || 0) + 1 });
+    mode = md[0]; Object.assign(album, { clip: null, loading: false, ready: null, gen: album.gen + 1 });
     try { writeFileSync(join(args.dir, "mode"), mode); } catch { /* still switches */ }
     log(`mode: ${mode}`);
   }
+  const ph = readTrigger("photo.trigger");
+  if (ph && ph[0]) { album.want = ph[0]; Object.assign(album, { clip: null, loading: false, ready: null, gen: album.gen + 1 }); log(`photo: ${ph[0]}`); }
   if (ctl.show && showOnce) { // a triggered show plays every egg once, then the board goes back to live
     if (ctl.show.i < lastShowI) { ctl.goLive(); showOnce = false; log("egg show: done, back to live"); }
     else lastShowI = ctl.show.i;
